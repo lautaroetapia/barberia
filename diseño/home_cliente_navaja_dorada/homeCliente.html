@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#e2e2e2",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "secondary-container": "#454747",
+                        "tertiary-container": "#97b0ff",
+                        "secondary": "#c6c6c7",
+                        "on-tertiary-fixed": "#00174b",
+                        "inverse-surface": "#e5e2e1",
+                        "on-tertiary-container": "#254188",
+                        "tertiary": "#bfcdff",
+                        "on-error-container": "#ffdad6",
+                        "background": "#131313",
+                        "surface-tint": "#e9c349",
+                        "outline": "#99907c",
+                        "on-secondary-container": "#b4b5b5",
+                        "surface-container-low": "#1c1b1b",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "on-tertiary": "#082b72",
+                        "inverse-primary": "#735c00",
+                        "primary-fixed": "#ffe088",
+                        "inverse-on-surface": "#313030",
+                        "primary-fixed-dim": "#e9c349",
+                        "on-secondary": "#2f3131",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "surface-container": "#20201f",
+                        "surface-container-highest": "#353535",
+                        "on-error": "#690005",
+                        "on-primary-fixed": "#241a00",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-bright": "#393939",
+                        "on-primary-fixed-variant": "#574500",
+                        "error-container": "#93000a",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-container": "#d4af37",
+                        "primary": "#f2ca50",
+                        "surface": "#131313",
+                        "error": "#ffb4ab",
+                        "surface-container-high": "#2a2a2a",
+                        "on-primary": "#3c2f00",
+                        "on-primary-container": "#554300",
+                        "on-surface-variant": "#d0c5af",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "surface-variant": "#353535",
+                        "surface-dim": "#131313",
+                        "outline-variant": "#4d4635",
+                        "tertiary-fixed": "#dbe1ff",
+                        "on-background": "#e5e2e1",
+                        "on-surface": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #131313;
+            color: #e5e2e1;
+        }
+        h1, h2, h3, h4, h5, h6, .font-headline {
+            font-family: 'Manrope', sans-serif;
+        }
+        /* Hidden scrollbar for horizontal scroll */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased pb-24 md:pb-0">
+<!-- TopAppBar from JSON -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#131313] dark:bg-[#131313]">
+<div class="flex flex-col items-center">
+<span class="font-manrope tracking-tighter text-white text-xl font-bold tracking-[0.2em] text-[#D4AF37]">NAVAJA DORADA</span>
+<span class="font-body text-sm text-on-surface-variant">Hola, Carlos</span>
+</div>
+<button class="text-[#D4AF37] scale-95 active:opacity-80 transition-transform hover:text-[#F2CA50] transition-colors duration-300">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/15 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="notifications">notifications</span>
+</div>
+</button>
+</header>
+<main class="pt-24 px-4 max-w-7xl mx-auto space-y-8 md:pt-32">
+<!-- Próximo turno Card -->
+<section class="space-y-4">
+<h2 class="font-headline text-lg font-bold tracking-tight text-on-surface">Tu próximo turno</h2>
+<div class="bg-surface-container-high rounded-2xl p-6 relative overflow-hidden group shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]">
+<!-- Golden Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-primary-container"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="font-headline font-semibold text-xl text-primary mb-1">Corte Atelier</p>
+<p class="font-body text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_today">calendar_today</span>
+                            15 Oct, 10:30 AM
+                        </p>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-lowest py-2 px-4 rounded-full border border-outline-variant/15">
+<img alt="Mateo" class="w-8 h-8 rounded-full object-cover" data-alt="Portrait of a male barber with a short beard looking professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApM6kbXFa4PcgRJQRB7p-JfBdL0DaX53ssvglgFwYNfyAWo25lbX33-nsZOisb050oKn0-JEBNbwrPMPWVD04vT2DoT0VKiaHM7bugI50OyuRS06UWnGbFsgysG8yDC-484hGpUlsF9wjA029ki__gODuIehuc-tSQx24hOr8REAkY3QcDxan3NYN-ePruYdsRwh8MvsftoewPgJsa99S_Qo7hM7Ag8aUJpnAJ9k7q6feXROY02d_s3gZjcMP3VoXRcJt1uUXQvdGW"/>
+<span class="font-body font-medium text-sm">Mateo</span>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="flex-1 bg-gradient-to-br from-primary to-primary-container text-on-primary font-body font-semibold py-3 rounded-xl transition-all hover:opacity-90 active:scale-[0.98]">
+                        Ver Detalles
+                    </button>
+<button class="flex-1 bg-surface-container-lowest text-on-surface-variant font-body font-semibold py-3 rounded-xl transition-all hover:text-on-surface hover:bg-surface-container active:scale-[0.98]">
+                        Cancelar
+                    </button>
+</div>
+</div>
+</section>
+<!-- Main Action CTA -->
+<section>
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-2xl p-6 flex items-center justify-between group shadow-[0_20px_50px_-15px_rgba(212,175,55,0.3)] transition-transform active:scale-[0.98]">
+<div class="flex flex-col text-left">
+<span class="font-headline text-2xl font-bold tracking-tight">Reservar turno</span>
+<span class="font-body text-on-primary/80 mt-1">Encuentra tu espacio en el Atelier</span>
+</div>
+<div class="w-12 h-12 rounded-full bg-on-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="add_circle">add_circle</span>
+</div>
+</button>
+</section>
+<!-- Barberos destacados Scroller -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h2 class="font-headline text-xl font-bold tracking-tight text-on-surface">Barberos destacados</h2>
+<button class="text-primary text-sm font-medium hover:underline underline-offset-4">Ver todos</button>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar pb-4 -mx-4 px-4 snap-x snap-mandatory">
+<!-- Barbero 1 -->
+<div class="snap-start shrink-0 w-[280px] bg-surface-container-high rounded-2xl p-6 border border-outline-variant/15 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full p-1 border-2 border-primary/30 mb-4">
+<img alt="Mateo" class="w-full h-full rounded-full object-cover" data-alt="Portrait of a male barber with a short beard looking professional against dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArBcyyrUmsG-RrzPKo-y7lWSVmTZZitta3L4K2EKrKLllgTDFQ-vCxvX9fuFYV7bLwCVDc0x8mQXnSkLApvH5qVzVBZEKOfZ7dnjLWTd66WEEztQrkqxJZ0DqqFFozFw_7gvIPuKibDtgd3S9qf5ZHLEYQDW1UUea4yWaXNEvO8vRi-FBc1dX5Kov2jQE9rM4-iSL4fQllOXJkQOkMZjXpa74GxotlqP9YqhXxbZb1pmGtqpyywzZ4xQ7o_O-zNHBK1uczsk4Gnj9R"/>
+</div>
+<h3 class="font-headline font-bold text-lg">Mateo</h3>
+<p class="text-primary text-sm font-medium mb-1">Master Barber</p>
+<p class="text-on-surface-variant text-xs mb-4">Atelier Palermo</p>
+<button class="w-full py-2 bg-surface-container-lowest text-on-surface rounded-lg text-sm font-medium hover:bg-surface-container transition-colors">Ver perfil</button>
+</div>
+<!-- Barbero 2 -->
+<div class="snap-start shrink-0 w-[280px] bg-surface-container-high rounded-2xl p-6 border border-outline-variant/15 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full p-1 border-2 border-surface-container-highest mb-4">
+<img alt="Julián" class="w-full h-full rounded-full object-cover grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" data-alt="Portrait of a young male barber looking serious against dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLAEqJ3muO7atMDm6-C9wVeO-iqCnlSAPEcglWhQhTsWTsAFoEIAvrbIjg_ZLN9VAPSyhGl327AEvxC6RNfuveiZArbZBOwa0i5e1rlmYHVZMLimA7_mGKoL8S0g8m7TdPwQNVgprwcbaPHwJn8Bdw4GvFLxJMUXRZY5GVc_aeI-rkuYUQGq7F6WdvHXT2KcosX0Tf0k0BsokedtoWZAjE7mtMAwOs6vgIc1FhXqxzrQ8R8eIU-XRPGMCoN_uNwh10eNKVkQOYdVBR"/>
+</div>
+<h3 class="font-headline font-bold text-lg">Julián</h3>
+<p class="text-on-surface-variant text-sm font-medium mb-1">Experto en Barba</p>
+<p class="text-on-surface-variant/70 text-xs mb-4">Atelier Palermo</p>
+<button class="w-full py-2 bg-surface-container-lowest text-on-surface rounded-lg text-sm font-medium hover:bg-surface-container transition-colors">Ver perfil</button>
+</div>
+<!-- Barbero 3 -->
+<div class="snap-start shrink-0 w-[280px] bg-surface-container-high rounded-2xl p-6 border border-outline-variant/15 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full p-1 border-2 border-surface-container-highest mb-4">
+<img alt="Enzo" class="w-full h-full rounded-full object-cover grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" data-alt="Portrait of a mature male barber looking focused against dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGsasiihcc7rMarO3IyXCEilyMyuL04ZmAih17eKroXiHVKv1Vk3zx1o-ALy2OMB5SARlXZcTnmg_4-ipf8ktrH7YL9e1Vuyrj8r5mrNogd9fRPDv32jFwZnbAxcF5nWb_CfDlf_FyRAQpuvWYrzAQPcdL8lAEdEme3BRdmQnTO904dNfew8Uywkt_iGRPS4FkbFXXoNYDUyb6oPG5EpCYfeV98nC5rw94_F-Fp3sAHVRSSdXIynppClCvRhJt1cB-QLwAJArEneWJ"/>
+</div>
+<h3 class="font-headline font-bold text-lg">Enzo</h3>
+<p class="text-on-surface-variant text-sm font-medium mb-1">Corte Clásico</p>
+<p class="text-on-surface-variant/70 text-xs mb-4">Atelier Belgrano</p>
+<button class="w-full py-2 bg-surface-container-lowest text-on-surface rounded-lg text-sm font-medium hover:bg-surface-container transition-colors">Ver perfil</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] rounded-t-2xl">
+<button class="flex flex-col items-center justify-center text-[#D4AF37] bg-[#2A2A2A] rounded-xl px-4 py-2 hover:text-white transition-all active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="content_cut" data-weight="fill" style="font-variation-settings: 'FILL' 1;">content_cut</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Atelier</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="dry_cleaning">dry_cleaning</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Services</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Bookings</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Profile</span>
+</button>
+</nav>
+</body></html>

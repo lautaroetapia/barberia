@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-on-surface": "#313030",
+                      "surface": "#131313",
+                      "background": "#131313",
+                      "surface-variant": "#353535",
+                      "secondary-fixed": "#e2e2e2",
+                      "primary-fixed": "#ffe088",
+                      "outline-variant": "#4d4635",
+                      "on-surface-variant": "#d0c5af",
+                      "on-secondary-fixed-variant": "#454747",
+                      "on-secondary-container": "#b4b5b5",
+                      "surface-container-highest": "#353535",
+                      "surface-container": "#20201f",
+                      "tertiary-fixed": "#dbe1ff",
+                      "inverse-surface": "#e5e2e1",
+                      "on-tertiary-fixed-variant": "#27438a",
+                      "on-surface": "#e5e2e1",
+                      "on-error": "#690005",
+                      "error-container": "#93000a",
+                      "inverse-primary": "#735c00",
+                      "on-tertiary-fixed": "#00174b",
+                      "on-background": "#e5e2e1",
+                      "on-secondary": "#2f3131",
+                      "secondary-container": "#454747",
+                      "surface-bright": "#393939",
+                      "error": "#ffb4ab",
+                      "on-primary-fixed": "#241a00",
+                      "surface-tint": "#e9c349",
+                      "on-error-container": "#ffdad6",
+                      "primary": "#f2ca50",
+                      "primary-container": "#d4af37",
+                      "on-primary-fixed-variant": "#574500",
+                      "on-primary": "#3c2f00",
+                      "tertiary-fixed-dim": "#b4c5ff",
+                      "outline": "#99907c",
+                      "tertiary": "#bfcdff",
+                      "surface-dim": "#131313",
+                      "surface-container-low": "#1c1b1b",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "surface-container-high": "#2a2a2a",
+                      "on-tertiary": "#082b72",
+                      "primary-fixed-dim": "#e9c349",
+                      "on-tertiary-container": "#254188",
+                      "secondary": "#c6c6c7",
+                      "on-primary-container": "#554300",
+                      "tertiary-container": "#97b0ff",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-secondary-fixed": "#1a1c1c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#1A1A1A] text-white font-body selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Header -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-center px-6 h-16 bg-[#1A1A1A] border-b border-[#333333] transition-colors">
+<button class="absolute left-6 text-white hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline text-lg font-bold text-white text-center">Elegí barbería</h1>
+</header>
+<main class="pt-20 pb-24 px-6 max-w-2xl mx-auto">
+<!-- Booking Progress Bar -->
+<nav class="mb-10 overflow-x-auto no-scrollbar">
+<div class="flex items-center justify-between min-w-[500px] py-4">
+<div class="flex flex-col items-center gap-2">
+<span class="text-[10px] font-headline font-extrabold tracking-widest text-[#D4AF37] uppercase">1. Barbería</span>
+<div class="h-1 w-16 bg-[#D4AF37] rounded-full shadow-[0_0_10px_rgba(212,175,55,0.4)]"></div>
+</div>
+<div class="flex flex-col items-center gap-2 opacity-60">
+<span class="text-[10px] font-headline font-bold tracking-widest text-neutral-400 uppercase">2. Servicio</span>
+<div class="h-1 w-16 bg-[#333333] rounded-full"></div>
+</div>
+<div class="flex flex-col items-center gap-2 opacity-60">
+<span class="text-[10px] font-headline font-bold tracking-widest text-neutral-400 uppercase">3. Barbero</span>
+<div class="h-1 w-16 bg-[#333333] rounded-full"></div>
+</div>
+<div class="flex flex-col items-center gap-2 opacity-60">
+<span class="text-[10px] font-headline font-bold tracking-widest text-neutral-400 uppercase">4. Horario</span>
+<div class="h-1 w-16 bg-[#333333] rounded-full"></div>
+</div>
+<div class="flex flex-col items-center gap-2 opacity-60">
+<span class="text-[10px] font-headline font-bold tracking-widest text-neutral-400 uppercase">5. Confirmar</span>
+<div class="h-1 w-16 bg-[#333333] rounded-full"></div>
+</div>
+</div>
+</nav>
+<!-- Header Section -->
+<section class="mb-8">
+<!-- Search Bar -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-neutral-400 group-focus-within:text-[#D4AF37] transition-colors">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full bg-[#2A2A2A] border-none rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-neutral-500 focus:ring-1 focus:ring-[#D4AF37]/30 transition-all font-body text-sm" placeholder="Buscar por nombre o zona" type="text"/>
+</div>
+</section>
+<!-- Barber Shop List -->
+<div class="space-y-6">
+<!-- Location Card 1 (Palermo) -->
+<div class="group relative overflow-hidden rounded-2xl bg-[#242424] border border-[#333333] shadow-sm transition-transform active:scale-95 duration-300">
+<img alt="Atelier Palermo" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Interior of a luxury barber shop with dark leather chairs, exposed brick walls, and warm vintage lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn1nf5_J_t3b392S90YJ6AvDw-RrRMvzjtP7NsgXRUgr5cCxCmJJame-PKVKMa3Q3AC_3La2Hguxx2aW0kzK6v3sVx6oyXkjIWfGnujOI-5izArdmTPeuiT33lK7X4nx42DsKZO4bHfcftHTrKVzmJZ3CLDUza0JoEZCZpWwifFbn97lbyL7P3IiZg5-IgtidxzUmJh5EoXq1BrlBRfhF1pWxaXAYu7AFbUOcmjP_q2Xyc21jwKp9UJmFM6F7_SE9TRPAbMn5ce-cg"/>
+<div class="p-5 flex justify-between items-end bg-[#242424] relative z-20 w-full">
+<div>
+<div class="flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[#D4AF37] text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-white text-xs font-bold">4.9</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-white">Atelier Palermo</h3>
+<p class="text-neutral-400 text-sm font-medium">Av. Santa Fe 3200</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-3 py-1 rounded-full">1.2 km</span>
+</div>
+</div>
+</div>
+<!-- Location Card 2 (Recoleta) -->
+<div class="group relative overflow-hidden rounded-2xl bg-[#242424] border border-[#333333] shadow-sm transition-transform active:scale-95 duration-300">
+<img alt="Atelier Recoleta" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Modern minimalist barber shop interior with marble floors, gold accents, and large mirrors in Recoleta" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqm7J-WTEo7fGnAVKSQvKYtLW98TImvz2xvNPIXchhEjl-grh7jOWdD2X3KlZSZV3CXXppZxeINiagyCXbXLO_vBumITziXsshhKQlP4aMpRH7qG3yWgQwAaz-QEAfw-1l5hPoDeTSgrxfNcL-lWqGEtsM_L0P1mwMv-10uaYkxujVzPpe0WR7ywv5tmOJC5fj2uNLEopy4DLXap7k9ligV-Q-0BpgGCefzxT_Tz8ichrOB5asPcLvSe-Ezr78zyPaARGMQWEk-xQC"/>
+<div class="p-5 flex justify-between items-end bg-[#242424] relative z-20 w-full">
+<div>
+<div class="flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[#D4AF37] text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-white text-xs font-bold">4.8</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-white">Atelier Recoleta</h3>
+<p class="text-neutral-400 text-sm font-medium">Av. Alvear 1850</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-3 py-1 rounded-full">2.5 km</span>
+</div>
+</div>
+</div>
+<!-- Location Card 3 (Puerto Madero) -->
+<div class="group relative overflow-hidden rounded-2xl bg-[#242424] border border-[#333333] shadow-sm transition-transform active:scale-95 duration-300">
+<img alt="Atelier Puerto Madero" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Industrial chic barber shop with concrete walls and sleek metallic grooming stations overlooking the water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUFciHpQ2IcLwUDCyCGa0CBbXAppMqvNlcM9W9377SdKj4pPM1bU9K86Rl7T3R4wv3PLEKq8BbpJJtbd69wq4mledsdUhQUk5eGdr4HAAKugKUT-zttpGPUl2fTg3R1CZb2luFiT_yy37tkKJww1Yb530R0CrWYnS99cl6JRxgZBFH3_EF3qEKQe8d3vDeQReQuAru8uM0oBHopzQEZAuAf5YrPoX3CCNiIhdCgbIgjtQknjKU0pKG2hGxhM77yL4tb0nqYN1MMPpx"/>
+<div class="p-5 flex justify-between items-end bg-[#242424] relative z-20 w-full">
+<div>
+<div class="flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[#D4AF37] text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-white text-xs font-bold">5.0</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-white">Atelier Madero</h3>
+<p class="text-neutral-400 text-sm font-medium">Juana Manso 1100</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-3 py-1 rounded-full">3.8 km</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Map Button (Contextual) -->
+<button class="fixed bottom-28 right-6 bg-[#D4AF37] text-white flex items-center gap-2 px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] transition-transform active:scale-90 font-headline font-bold text-sm">
+<span class="material-symbols-outlined">map</span>
+            VER MAPA
+        </button>
+</main>
+<!-- Bottom Navigation Bar (Contextual/Suppressed logic applied but user asked for app navigation anchors) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#1A1A1A]/90 backdrop-blur-xl border-t border-[#333333] rounded-t-2xl shadow-[0_-4px_30px_rgba(0,0,0,0.05)]">
+<div class="flex flex-col items-center justify-center text-neutral-400 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">content_cut</span>
+<span class="font-headline text-[10px] font-medium uppercase tracking-widest mt-1">Atelier</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-400 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">dry_cleaning</span>
+<span class="font-headline text-[10px] font-medium uppercase tracking-widest mt-1">Services</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#D4AF37] bg-[#D4AF37]/10 rounded-xl px-4 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event_available</span>
+<span class="font-headline text-[10px] font-medium uppercase tracking-widest mt-1">Bookings</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-400 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined">person</span>
+<span class="font-headline text-[10px] font-medium uppercase tracking-widest mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

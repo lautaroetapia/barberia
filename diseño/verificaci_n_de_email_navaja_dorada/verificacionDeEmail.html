@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Verificar Correo - Navaja Dorada</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#131313",
+                        "surface-variant": "#353535",
+                        "on-primary-fixed-variant": "#574500",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "on-secondary": "#2f3131",
+                        "on-primary": "#3c2f00",
+                        "secondary-container": "#454747",
+                        "inverse-surface": "#e5e2e1",
+                        "on-surface": "#e5e2e1",
+                        "surface-bright": "#393939",
+                        "secondary": "#c6c6c7",
+                        "error-container": "#93000a",
+                        "inverse-on-surface": "#313030",
+                        "outline-variant": "#4d4635",
+                        "outline": "#99907c",
+                        "surface-container-highest": "#353535",
+                        "surface-tint": "#e9c349",
+                        "surface-dim": "#131313",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary-fixed": "#00174b",
+                        "inverse-primary": "#735c00",
+                        "on-tertiary-container": "#254188",
+                        "tertiary": "#bfcdff",
+                        "on-tertiary": "#082b72",
+                        "on-primary-container": "#554300",
+                        "tertiary-fixed": "#dbe1ff",
+                        "surface-container-lowest": "#0e0e0e",
+                        "tertiary-container": "#97b0ff",
+                        "primary-fixed": "#ffe088",
+                        "on-surface-variant": "#d0c5af",
+                        "on-secondary-container": "#b4b5b5",
+                        "surface-container-low": "#1c1b1b",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface": "#131313",
+                        "primary-fixed-dim": "#e9c349",
+                        "surface-container": "#20201f",
+                        "primary-container": "#d4af37",
+                        "on-primary-fixed": "#241a00",
+                        "on-background": "#e5e2e1",
+                        "on-secondary-fixed-variant": "#454747",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary": "#f2ca50",
+                        "on-secondary-fixed": "#1a1c1c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body min-h-screen flex flex-col antialiased selection:bg-primary/30">
+<!-- TopAppBar Component -->
+<header class="bg-[#131313] dark:bg-[#131313] fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 font-manrope tracking-tighter text-white transition-colors duration-300">
+<button aria-label="Menu" class="text-[#D4AF37] hover:text-[#F2CA50] transition-colors duration-300 scale-95 active:opacity-80 flex items-center justify-center w-10 h-10 rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="text-xl font-bold tracking-[0.2em] text-[#D4AF37] uppercase">NAVAJA DORADA</h1>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/15 flex items-center justify-center">
+<!-- Simulated Avatar Placeholder -->
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person">person</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center px-6 pt-24 pb-12 w-full max-w-md mx-auto">
+<!-- Illustration Area -->
+<div class="relative w-40 h-40 mb-10 flex items-center justify-center">
+<!-- Ambient Glow for Depth -->
+<div class="absolute inset-0 bg-primary/10 blur-[40px] rounded-full"></div>
+<img alt="Envelope illustration" class="relative z-10 w-full h-full object-contain drop-shadow-2xl opacity-90 filter grayscale contrast-125" data-alt="Minimalist dark grey envelope with a glowing liquid gold wax seal in the center, isolated on a pure dark background, high fashion editorial lighting, subtle metallic textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOQGuCIC4eMDr9-5k_-5CnDRPNbxW62FkkG-XdxaV-nEbKZlQ5R5kz_BOJhd7XVVxszvkeG2HYp-sK0MIWiOqqCvVLf5YKQQ-quQNP-3TrhD1eZ48gw--4_s5PGEDmlSZSLEoGozGLGyWqb5iZG4Hk5RCvociDuFpo-H_AYcfNmicmh6X8yNYEPSPekywN_YEsTsTAETfnqVC5dZuE0CuEz10CbGAysMwYvi1jDoxZXoDv9omc6ISajov5KRX6vIjpzZS3nrDD6bXO"/>
+<!-- Abstract Wax Seal Overlay (CSS representation to match prompt intent within DS) -->
+<div class="absolute inset-0 flex items-center justify-center z-20 mix-blend-screen">
+<div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-container shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center">
+<span class="material-symbols-outlined text-[#3c2f00]" data-icon="content_cut" style="font-variation-settings: 'FILL' 1;">content_cut</span>
+</div>
+</div>
+</div>
+<!-- Typography Hierarchy -->
+<h2 class="font-headline text-3xl md:text-4xl font-bold text-on-surface text-center mb-4 tracking-tighter leading-tight">
+            ¡Estás a un paso!
+        </h2>
+<p class="font-body text-base text-on-surface-variant text-center max-w-[280px] mb-10 leading-relaxed">
+            Enviamos un enlace a tu correo. Activá tu cuenta para continuar.
+        </p>
+<!-- Primary Action Button (The "Golden Touch") -->
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-label font-bold text-lg py-4 px-6 rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] hover:shadow-[0_0_50px_rgba(242,202,80,0.2)] transition-all duration-300 active:scale-[0.98] mb-8">
+            Abrir correo
+        </button>
+<!-- Secondary Actions Area -->
+<div class="flex flex-col items-center justify-center w-full space-y-2 mt-2">
+<button class="bg-transparent text-primary font-label font-medium tracking-wide underline underline-offset-4 hover:text-primary-fixed transition-colors active:opacity-70">
+                Reenviar
+            </button>
+<p class="font-body text-xs text-on-surface-variant/70 tracking-wide">
+                Podrás reenviar en <span class="font-mono tabular-nums">60s</span>
+</p>
+</div>
+<!-- Spacer to push bottom link down -->
+<div class="flex-grow"></div>
+<!-- Bottom Link -->
+<button class="mt-12 font-label text-sm text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_back">arrow_back</span>
+            Volver a Iniciar sesión
+        </button>
+</main>
+</body></html>

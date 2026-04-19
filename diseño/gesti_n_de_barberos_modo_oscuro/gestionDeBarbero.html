@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Barberos</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "on-secondary": "#2f3131",
+                        "surface-bright": "#393939",
+                        "secondary": "#c6c6c7",
+                        "surface-container-high": "#2a2a2a",
+                        "primary": "#f2ca50",
+                        "on-primary-container": "#554300",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#97b0ff",
+                        "surface-container": "#20201f",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-fixed": "#dbe1ff",
+                        "primary-fixed": "#ffe088",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "background": "#1A1A1A",
+                        "on-primary": "#3c2f00",
+                        "on-primary-fixed": "#241a00",
+                        "inverse-surface": "#e5e2e1",
+                        "on-surface-variant": "#d0c5af",
+                        "surface-container-lowest": "#0e0e0e",
+                        "error": "#ffb4ab",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#e9c349",
+                        "on-tertiary-container": "#254188",
+                        "surface": "#1A1A1A",
+                        "outline-variant": "#4d4635",
+                        "outline": "#99907c",
+                        "on-primary-fixed-variant": "#574500",
+                        "inverse-primary": "#735c00",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary": "#082b72",
+                        "surface-dim": "#131313",
+                        "secondary-container": "#454747",
+                        "surface-container-low": "#1c1b1b",
+                        "primary-container": "#d4af37",
+                        "surface-variant": "#353535",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "on-tertiary-fixed": "#00174b",
+                        "surface-container-highest": "#353535",
+                        "tertiary": "#bfcdff",
+                        "surface-tint": "#e9c349"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Manrope", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-surface'); }
+        .glass-panel {
+            background-color: rgba(53, 53, 53, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body antialiased pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#1A1A1A]/90 backdrop-blur-lg flex justify-between items-center px-6 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+<button class="text-white/60 hover:text-[#D4AF37] transition-colors active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline font-bold tracking-[-0.02em] uppercase text-[#D4AF37] text-lg tracking-widest">NAVAJA DORADA</h1>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-[#D4AF37]/30">
+<img alt="Barber profile" class="w-full h-full object-cover" data-alt="close up portrait of a male barber with a neat beard and professional attire, dark cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaCL-aJcoK2Zp25XLE-1FWroVng48nYGm_oVI80LrGLe0YgMHIw2QTzCFeGH_eNhzo1txC7GImg8Ke6ymFkoRbKELAtt-hxjB4Hhgb7XqNLJdC6HGnS2_zVWIpHv_13lCBjoMhK1vfotekwLa7ttUUaccnA1e36TaJH6ftKOAnW9GL_GlsHCQK3kibknbK6__AfATg5wsM9vHooCyD5I78AOQl0r0IBWmFXig3Yjxo6rUwolHSYXClONxWaCwXTo51uRN94ccu82UF"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-4 max-w-md mx-auto space-y-8">
+<!-- Page Title -->
+<div>
+<h2 class="font-headline text-3xl font-bold tracking-tight text-white">Barberos</h2>
+<p class="font-body text-gray-400 text-sm mt-1">Gestión del equipo y solicitudes</p>
+</div>
+<!-- Featured Banner -->
+<div class="bg-[#2A2A2A] rounded-xl p-6 relative overflow-hidden group border border-white/5">
+<div class="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/10 to-transparent opacity-50"></div>
+<div class="relative z-10 flex flex-col gap-4">
+<div>
+<h3 class="font-headline text-xl font-semibold text-white mb-1">¿Querés atender vos mismo?</h3>
+<p class="font-body text-gray-400 text-sm">Activá tu perfil de barbero y comenzá a recibir turnos directamente en tu agenda.</p>
+</div>
+<button class="bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#241a00] font-headline font-bold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity self-start">
+                    Activar
+                </button>
+</div>
+</div>
+<!-- Main List: Barberos Activos -->
+<section>
+<div class="flex justify-between items-end mb-4">
+<h3 class="font-headline text-xl font-semibold text-white">Barberos Activos</h3>
+<span class="text-xs text-gray-400 font-medium">3 en equipo</span>
+</div>
+<div class="space-y-4">
+<!-- Barber Item 1 -->
+<div class="bg-[#2A2A2A] rounded-xl p-4 flex items-center justify-between border border-white/5">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="Mateo" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="portrait of a young male barber smiling slightly, dark background, premium lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW4ZhLi_09OrhvpPttFStG4su0aFzF6R4z4FVHyoqqXJ_C42xen-QYFygrY0wPNrLR1oPdsfsg6_oJzzBF39PnmwwW1yOgRxJ_SF_M0VkRndDmbFiB_qfBcfygkWEUeBq3SRWWqQHrDYWwNtYDPKLA-eVvdubFfBY-Tbl5dsXWCvXaTnandzpVH4BfKZJVtyRsnkuW3zEg-ekAIJbUkKtnRjVfYu-Ec6pHiQPQw3a66fC2w7SxGMYpkyTT1duclKFv9DHKfIeqxGDC"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#2A2A2A]"></span>
+</div>
+<div>
+<p class="font-headline font-semibold text-white">Mateo R.</p>
+<p class="font-body text-xs text-gray-400">Corte Clásico &amp; Barba</p>
+</div>
+</div>
+<!-- Toggle Switch Mockup -->
+<div class="w-10 h-5 bg-[#D4AF37]/20 rounded-full relative flex items-center px-1 cursor-pointer">
+<div class="w-4 h-4 bg-[#f2ca50] rounded-full absolute right-1"></div>
+</div>
+</div>
+<!-- Barber Item 2 -->
+<div class="bg-[#2A2A2A] rounded-xl p-4 flex items-center justify-between border border-white/5">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="Lucas" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="portrait of a confident male barber with tattoos, moody lighting, obsidian background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOKavevx3OHv-B8cC3UB1qaPOJBr8YABw0j771o2TVw8wWD0mpHhfYcnlrEty_b_fL1cR-iN-tgHd_7YOvZ7vpr2Bkwql53DvPs1YfCLuPs4kKGCl6MfR8dNgbF4AEkK-skJMk2BwJh-TKIdKC_GSw1DOx3ySAjHN0d5ln61C4rwgOpBENCuoXwcNuHYRTGvEnPz70lGRGkwBfU5fiPpA96UEZvsDgUW7xmTzhc3SYoQrEC6MgY2yoBcPiO_gSBiQiOrbLmqNnxBaX"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#2A2A2A]"></span>
+</div>
+<div>
+<p class="font-headline font-semibold text-white">Lucas G.</p>
+<p class="font-body text-xs text-gray-400">Diseño &amp; Fade</p>
+</div>
+</div>
+<div class="w-10 h-5 bg-[#D4AF37]/20 rounded-full relative flex items-center px-1 cursor-pointer">
+<div class="w-4 h-4 bg-[#f2ca50] rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Action: Generar código -->
+<section class="bg-[#20201F] border border-white/10 rounded-xl p-6 text-center shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+<span class="material-symbols-outlined text-[#D4AF37] mb-2 text-3xl" style="font-variation-settings: 'FILL' 0;">qr_code_scanner</span>
+<h4 class="font-headline text-lg font-medium text-white mb-2">Invitar nuevo barbero</h4>
+<p class="font-body text-sm text-gray-400 mb-4">Generá un código único para que un nuevo profesional se una a tu atelier.</p>
+<button class="bg-[#2A2A2A] text-[#f2ca50] font-headline font-bold py-3 px-6 rounded-xl w-full flex justify-center items-center gap-2 hover:bg-[#353535] transition-colors border border-[#D4AF37]/20">
+<span>Generar código invitación</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<!-- Hidden code reveal state example -->
+<!-- <div class="mt-4 p-3 bg-surface rounded-lg border border-outline-variant/30 flex justify-between items-center">
+                <span class="font-mono text-xl tracking-widest text-[#f2ca50]">N8X-2P4</span>
+                <button class="text-gray-400 hover:text-[#f2ca50]"><span class="material-symbols-outlined">content_copy</span></button>
+            </div> -->
+</section>
+<!-- Section: Solicitudes pendientes -->
+<section>
+<div class="flex items-center gap-2 mb-4">
+<h3 class="font-headline text-xl font-semibold text-white">Solicitudes pendientes</h3>
+<span class="bg-[#D4AF37] text-[#241a00] text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+</div>
+<!-- Request Card -->
+<div class="bg-[#2A2A2A] rounded-xl p-5 border-l-2 border-[#D4AF37] border-y border-r border-y-white/5 border-r-white/5 shadow-lg">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-[#131313] flex items-center justify-center text-gray-300 font-headline font-bold border border-white/5">
+                            ET
+                        </div>
+<div>
+<p class="font-headline font-semibold text-white">Ezequiel T.</p>
+<p class="font-body text-xs text-gray-400">Solicitado hoy, 10:45 AM</p>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 bg-[#1A1A1A] text-white border border-white/10 font-headline font-medium py-2 rounded-lg hover:bg-[#353535] transition-colors">Rechazar</button>
+<button class="flex-1 bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#241a00] font-headline font-medium py-2 rounded-lg hover:opacity-90 transition-opacity">Aprobar</button>
+</div>
+</div>
+<div class="bg-[#2A2A2A] rounded-xl p-5 border-l-2 border-[#D4AF37] border-y border-r border-y-white/5 border-r-white/5 shadow-lg mt-4">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-[#131313] flex items-center justify-center text-gray-300 font-headline font-bold border border-white/5">
+                CP
+            </div>
+<div>
+<p class="font-headline font-semibold text-white">Carlos Pérez</p>
+<p class="font-body text-xs text-gray-400">Solicitado hoy, 11:20 AM</p>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 bg-[#1A1A1A] text-white border border-white/10 font-headline font-medium py-2 rounded-lg hover:bg-[#353535] transition-colors">Rechazar</button>
+<button class="flex-1 bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#241a00] font-headline font-medium py-2 rounded-lg hover:opacity-90 transition-opacity">Aprobar</button>
+</div>
+</div></section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#0E0E0E]/95 backdrop-blur-2xl bg-gradient-to-t from-[#131313] to-transparent shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex justify-around items-center h-20 px-4 md:hidden border-t border-white/5">
+<a class="flex flex-col items-center gap-1 text-white/40 hover:text-[#D4AF37] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">Atelier</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#D4AF37] font-bold active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">Profile</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-white/40 hover:text-[#D4AF37] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">event_available</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">Bookings</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-white/40 hover:text-[#D4AF37] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">content_cut</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">Services</span>
+</a>
+</nav>
+</body></html>

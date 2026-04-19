@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Nueva Contraseña</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#e9c349",
+                      "primary": "#f2ca50",
+                      "error": "#ffb4ab",
+                      "error-container": "#93000a",
+                      "surface-variant": "#353535",
+                      "primary-fixed": "#ffe088",
+                      "on-secondary": "#2f3131",
+                      "secondary-container": "#454747",
+                      "on-secondary-fixed": "#1a1c1c",
+                      "on-error-container": "#ffdad6",
+                      "on-error": "#690005",
+                      "on-surface-variant": "#d0c5af",
+                      "surface-dim": "#131313",
+                      "on-primary": "#3c2f00",
+                      "outline-variant": "#4d4635",
+                      "on-tertiary-fixed": "#00174b",
+                      "surface-container-low": "#1c1b1b",
+                      "on-tertiary-container": "#254188",
+                      "outline": "#99907c",
+                      "surface-container-lowest": "#0e0e0e",
+                      "surface-tint": "#e9c349",
+                      "surface-container-highest": "#353535",
+                      "on-tertiary": "#082b72",
+                      "on-primary-fixed": "#241a00",
+                      "tertiary-fixed": "#dbe1ff",
+                      "secondary": "#c6c6c7",
+                      "surface-bright": "#393939",
+                      "primary-container": "#d4af37",
+                      "inverse-primary": "#735c00",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "on-secondary-container": "#b4b5b5",
+                      "tertiary-container": "#97b0ff",
+                      "secondary-fixed": "#e2e2e2",
+                      "on-tertiary-fixed-variant": "#27438a",
+                      "background": "#131313",
+                      "surface-container-high": "#2a2a2a",
+                      "surface-container": "#20201f",
+                      "inverse-surface": "#e5e2e1",
+                      "on-background": "#e5e2e1",
+                      "on-secondary-fixed-variant": "#454747",
+                      "tertiary": "#bfcdff",
+                      "inverse-on-surface": "#313030",
+                      "surface": "#131313",
+                      "on-surface": "#e5e2e1",
+                      "on-primary-fixed-variant": "#574500",
+                      "tertiary-fixed-dim": "#b4c5ff",
+                      "on-primary-container": "#554300"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Manrope"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen flex flex-col antialiased selection:bg-primary selection:text-on-primary">
+<!-- App Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-surface">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="font-headline font-bold text-lg tracking-tight text-on-surface absolute left-1/2 transform -translate-x-1/2">
+            Crear nueva contraseña
+        </h1>
+<div class="w-10 h-10"></div> <!-- Spacer for centering -->
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col pt-24 px-6 pb-8">
+<div class="flex-1 flex flex-col">
+<p class="font-body text-outline mb-10 text-base leading-relaxed">
+                Ingresá tu nueva clave para acceder a tu cuenta.
+            </p>
+<form class="space-y-8 flex-1 flex flex-col">
+<div class="space-y-6 flex-1">
+<!-- New Password Input -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">lock</span>
+</div>
+<input class="block w-full pl-10 pr-10 py-3 bg-transparent border-0 border-b border-outline text-on-surface focus:ring-0 focus:border-primary transition-colors font-body text-lg placeholder-outline-variant" id="new-password" name="new-password" placeholder="Nueva contraseña" required="" type="password"/>
+<button aria-label="Toggle password visibility" class="absolute inset-y-0 right-0 pr-0 flex items-center text-outline hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined">visibility_off</span>
+</button>
+</div>
+<!-- Confirm Password Input -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">lock</span>
+</div>
+<input class="block w-full pl-10 pr-10 py-3 bg-transparent border-0 border-b border-outline text-on-surface focus:ring-0 focus:border-primary transition-colors font-body text-lg placeholder-outline-variant" id="confirm-password" name="confirm-password" placeholder="Confirmar contraseña" required="" type="password"/>
+<button aria-label="Toggle password visibility" class="absolute inset-y-0 right-0 pr-0 flex items-center text-outline hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-8 mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-bold text-lg py-4 px-6 rounded-xl shadow-[0_4px_30px_rgba(242,202,80,0.15)] hover:shadow-[0_4px_40px_rgba(242,202,80,0.25)] active:scale-[0.98] transition-all duration-300" type="submit">
+                        Restablecer
+                    </button>
+</div>
+</form>
+</div>
+</main>
+</body></html>

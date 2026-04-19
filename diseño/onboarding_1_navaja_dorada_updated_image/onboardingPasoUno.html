@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#1c1b1b",
+                    "secondary-container": "#454747",
+                    "surface-dim": "#131313",
+                    "surface-variant": "#353535",
+                    "on-tertiary-fixed-variant": "#27438a",
+                    "on-tertiary-fixed": "#00174b",
+                    "primary-container": "#d4af37",
+                    "tertiary": "#bfcdff",
+                    "surface-tint": "#e9c349",
+                    "surface-container-highest": "#353535",
+                    "on-surface-variant": "#d0c5af",
+                    "on-primary-fixed": "#241a00",
+                    "inverse-surface": "#e5e2e1",
+                    "on-primary": "#3c2f00",
+                    "primary-fixed-dim": "#e9c349",
+                    "on-tertiary-container": "#254188",
+                    "error-container": "#93000a",
+                    "error": "#ffb4ab",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-surface": "#e5e2e1",
+                    "inverse-primary": "#735c00",
+                    "surface": "#131313",
+                    "outline-variant": "#4d4635",
+                    "outline": "#99907c",
+                    "on-primary-fixed-variant": "#574500",
+                    "on-tertiary": "#082b72",
+                    "surface-container": "#20201f",
+                    "tertiary-container": "#97b0ff",
+                    "inverse-on-surface": "#313030",
+                    "primary-fixed": "#ffe088",
+                    "tertiary-fixed": "#dbe1ff",
+                    "background": "#131313",
+                    "secondary-fixed": "#e2e2e2",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-secondary": "#2f3131",
+                    "tertiary-fixed-dim": "#b4c5ff",
+                    "on-error": "#690005",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary": "#c6c6c7",
+                    "surface-bright": "#393939",
+                    "primary": "#f2ca50",
+                    "on-primary-container": "#554300",
+                    "on-background": "#e5e2e1",
+                    "on-secondary-fixed-variant": "#454747",
+                    "on-secondary-container": "#b4b5b5",
+                    "on-error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Manrope"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body h-screen w-screen overflow-hidden flex flex-col justify-between selection:bg-primary-container selection:text-on-primary">
+<!-- Top AppBar (Brand Anchor) - Suppressed per rules for Onboarding/Linear flow -->
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col items-center justify-start w-full max-w-md mx-auto relative pt-12 pb-6 px-6">
+<!-- Image Section -->
+<div class="w-full aspect-[4/5] relative rounded-xl overflow-hidden mb-10 shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+<img alt="Professional high-end photography of a stylish man with a sharp, modern fade haircut and groomed beard in a premium barbershop." class="w-full h-full object-cover" data-alt="professional photography of a modern stylish haircut, premium barbershop environment with elegant obsidian and gold accents, atmospheric lighting, high-end grooming scene" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRsOLICSFsLDyllxHTFzHt7aeK7hnAMWm6C191AQVPUe1bwmPZZj-4IvREHGl_cvi6IbdndPoPtdRa5r_mLgHr23BCSHLVWC24CMfoYiEDtGDfxXaPEKaItT3DeI0zwzclLdVAuP5U0i_NbvcG6-9oSA37m7ynRNlz7F64wHcuJmD3ohpa8Fks4afQHHbPz1Sq_163J8iODiCiHI_HpDhi5oNQV6rUpfYZtzDJlYsgN4XyqRTFkowghZJzieQGaD6UgU4szHLLd_xu"/>
+<!-- Subtle gradient overlay to merge image with dark background -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
+</div>
+<!-- Typography Section -->
+<div class="flex flex-col items-center text-center space-y-4 px-4 w-full">
+<h1 class="font-headline text-3xl font-extrabold tracking-[-0.02em] text-on-surface leading-tight">
+                Tu corte, a tu ritmo
+            </h1>
+<p class="font-body text-base text-on-surface-variant max-w-[280px] leading-relaxed">
+                Reservá en segundos, sin esperas.
+            </p>
+</div>
+<!-- Progress Indicator -->
+<div class="flex justify-center items-center space-x-3 mt-8">
+<div class="w-8 h-1.5 rounded-full bg-primary shadow-[0_0_15px_rgba(242,202,80,0.3)]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-surface-container-high"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-surface-container-high"></div>
+</div>
+</main>
+<!-- Fixed Footer Section -->
+<footer class="w-full max-w-md mx-auto px-6 pb-12 pt-4 bg-gradient-to-t from-surface to-transparent flex flex-col items-center gap-6">
+<!-- Primary Button -->
+<button class="w-full py-4 rounded-xl font-headline font-bold text-lg tracking-wide flex justify-center items-center bg-gradient-to-br from-primary to-primary-container text-on-primary active:scale-95 transition-transform shadow-[0_10px_30px_rgba(212,175,55,0.2)]">
+            Siguiente
+        </button>
+<!-- Secondary Link -->
+<a class="font-body text-sm font-medium text-on-surface-variant hover:text-primary transition-colors underline decoration-outline-variant underline-offset-4" href="#">
+            ¿Ya tenés cuenta? Iniciar sesión
+        </a>
+</footer>
+<!-- BottomNavBar (Brand Anchor) - Suppressed per rules for Onboarding/Linear flow -->
+</body></html>

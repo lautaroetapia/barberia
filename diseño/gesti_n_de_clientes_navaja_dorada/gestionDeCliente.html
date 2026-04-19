@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Clientes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error": "#ffb4ab",
+                      "on-secondary-fixed-variant": "#454747",
+                      "surface-container-high": "#2a2a2a",
+                      "on-surface": "#e5e2e1",
+                      "tertiary-fixed": "#dbe1ff",
+                      "inverse-primary": "#735c00",
+                      "primary": "#f2ca50",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#1c1b1b",
+                      "on-tertiary-fixed-variant": "#27438a",
+                      "on-error": "#690005",
+                      "secondary-fixed": "#e2e2e2",
+                      "inverse-on-surface": "#313030",
+                      "on-tertiary-container": "#254188",
+                      "inverse-surface": "#e5e2e1",
+                      "on-background": "#e5e2e1",
+                      "on-surface-variant": "#d0c5af",
+                      "on-primary-fixed-variant": "#574500",
+                      "surface-bright": "#393939",
+                      "secondary-container": "#454747",
+                      "secondary": "#c6c6c7",
+                      "outline-variant": "#4d4635",
+                      "on-tertiary-fixed": "#00174b",
+                      "outline": "#99907c",
+                      "surface-tint": "#e9c349",
+                      "on-secondary": "#2f3131",
+                      "tertiary-container": "#97b0ff",
+                      "primary-container": "#d4af37",
+                      "on-primary-fixed": "#241a00",
+                      "background": "#131313",
+                      "surface-variant": "#353535",
+                      "on-secondary-fixed": "#1a1c1c",
+                      "on-secondary-container": "#b4b5b5",
+                      "on-primary-container": "#554300",
+                      "primary-fixed": "#ffe088",
+                      "on-tertiary": "#082b72",
+                      "tertiary": "#bfcdff",
+                      "on-error-container": "#ffdad6",
+                      "on-primary": "#3c2f00",
+                      "surface": "#131313",
+                      "surface-container": "#20201f",
+                      "surface-container-lowest": "#0e0e0e",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "surface-dim": "#131313",
+                      "tertiary-fixed-dim": "#b4c5ff",
+                      "surface-container-highest": "#353535",
+                      "primary-fixed-dim": "#e9c349"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Manrope"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.surface');
+            color: theme('colors.on-surface');
+            font-family: theme('fontFamily.body');
+        }
+        h1, h2, h3, h4, h5, h6, .font-headline {
+            font-family: theme('fontFamily.headline');
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.surface-variant');
+            border-radius: 4px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen pb-24 relative overflow-x-hidden">
+<!-- App Container -->
+<div class="max-w-md mx-auto min-h-screen flex flex-col md:hidden">
+<!-- Screen 1: Lista de Clientes -->
+<div class="flex flex-col flex-grow" id="screen-list">
+<!-- TopAppBar Component (from JSON) -->
+<header class="fixed top-0 w-full z-50 bg-[#131313]/90 dark:bg-neutral-900/90 backdrop-blur-md transition-all shadow-none">
+<div class="flex items-center justify-between px-6 py-4 w-full">
+<button class="text-[#D4AF37] hover:text-[#F2CA50] transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="font-manrope font-bold tracking-tighter uppercase text-lg text-[#D4AF37] tracking-[0.2em]">NAVAJA DORADA</h1>
+<div class="w-6"></div> <!-- Spacer for center alignment -->
+</div>
+<!-- Separation logic: tonal-transition (gradient instead of border) -->
+<div class="h-4 bg-gradient-to-b from-[#131313] to-transparent w-full"></div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-24 px-6 flex-grow flex flex-col gap-6">
+<!-- Page Title -->
+<div>
+<h2 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface mb-2">Clientes</h2>
+<p class="text-on-surface-variant text-sm">Gestiona tu cartera de clientes.</p>
+</div>
+<!-- Search Bar -->
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-lowest text-on-surface border border-outline-variant/30 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-body text-sm placeholder:text-outline shadow-inner" placeholder="Buscar cliente..." type="text"/>
+</div>
+<!-- Client List (Cards) -->
+<div class="flex flex-col gap-4">
+<!-- Client Card 1 -->
+<button class="w-full text-left bg-surface-container-low rounded-xl p-5 hover:bg-surface-container-highest transition-colors group flex items-start justify-between">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-on-surface font-headline font-bold text-lg">
+                                CM
+                            </div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">Carlos M.</h3>
+<div class="flex flex-col gap-1 mt-1">
+<span class="text-xs text-on-surface-variant">Última visita: 12 Oct</span>
+<span class="text-xs text-on-surface-variant">Total visitas: 8</span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<!-- Client Card 2 (With Badge) -->
+<button class="w-full text-left bg-surface-container-low rounded-xl p-5 hover:bg-surface-container-highest transition-colors group flex items-start justify-between border-l-2 border-error/50">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-on-surface font-headline font-bold text-lg">
+                                MV
+                            </div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">Marcos V.</h3>
+<div class="flex flex-col gap-1 mt-1">
+<span class="text-xs text-on-surface-variant">Última visita: 5 Sep</span>
+<span class="text-xs text-on-surface-variant">Total visitas: 3</span>
+</div>
+<div class="mt-2 inline-flex items-center gap-1 bg-error-container/20 text-error px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-[12px] fill">warning</span>
+                                    PENALIZACIÓN
+                                </div>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<!-- Client Card 3 -->
+<button class="w-full text-left bg-surface-container-low rounded-xl p-5 hover:bg-surface-container-highest transition-colors group flex items-start justify-between">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center text-on-surface font-headline font-bold text-lg">
+                                LR
+                            </div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">Luis R.</h3>
+<div class="flex flex-col gap-1 mt-1">
+<span class="text-xs text-on-surface-variant">Última visita: 22 Oct</span>
+<span class="text-xs text-on-surface-variant">Total visitas: 15</span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+</div>
+</main>
+</div>
+<!-- BottomNavBar Component (from JSON) -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-[#131313]/80 dark:bg-neutral-950/80 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+<div class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2">
+<button class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined mb-1">calendar_today</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Agenda</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Historial</span>
+</button>
+<!-- Active Tab: Clientes -->
+<button class="flex flex-col items-center justify-center text-[#D4AF37] p-2 relative after:content-[''] after:absolute after:bottom-0 after:w-1 after:h-1 after:bg-[#D4AF37] after:rounded-full hover:text-[#F2CA50] transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined mb-1 fill">group</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Clientes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Perfil</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

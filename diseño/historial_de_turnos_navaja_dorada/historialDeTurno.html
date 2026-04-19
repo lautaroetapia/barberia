@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Historial de Turnos - Navaja Dorada</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#b4c5ff",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#00174b",
+                    "on-secondary-container": "#b4b5b5",
+                    "on-error": "#690005",
+                    "surface-tint": "#e9c349",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-secondary": "#2f3131",
+                    "on-surface-variant": "#d0c5af",
+                    "secondary-container": "#454747",
+                    "primary": "#f2ca50",
+                    "outline": "#99907c",
+                    "on-primary-fixed-variant": "#574500",
+                    "surface-variant": "#353535",
+                    "error": "#ffb4ab",
+                    "on-tertiary": "#082b72",
+                    "surface-dim": "#131313",
+                    "secondary": "#c6c6c7",
+                    "inverse-surface": "#e5e2e1",
+                    "on-surface": "#e5e2e1",
+                    "error-container": "#93000a",
+                    "on-tertiary-container": "#254188",
+                    "tertiary-container": "#97b0ff",
+                    "primary-fixed-dim": "#e9c349",
+                    "surface-container-highest": "#353535",
+                    "surface-bright": "#393939",
+                    "on-primary": "#3c2f00",
+                    "on-primary-container": "#554300",
+                    "secondary-fixed": "#e2e2e2",
+                    "background": "#131313",
+                    "surface-container-low": "#1c1b1b",
+                    "inverse-primary": "#735c00",
+                    "surface": "#131313",
+                    "tertiary-fixed": "#dbe1ff",
+                    "on-tertiary-fixed-variant": "#27438a",
+                    "primary-container": "#d4af37",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "on-background": "#e5e2e1",
+                    "inverse-on-surface": "#313030",
+                    "surface-container-high": "#2a2a2a",
+                    "primary-fixed": "#ffe088",
+                    "on-secondary-fixed-variant": "#454747",
+                    "on-primary-fixed": "#241a00",
+                    "tertiary": "#bfcdff",
+                    "surface-container": "#20201f",
+                    "outline-variant": "#4d4635"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; }
+        .glass-effect {
+            background: rgba(53, 53, 53, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .ambient-shadow {
+            box-shadow: 0 0 40px 0 rgba(14, 14, 14, 0.4);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col pt-16 pb-28">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#131313] dark:bg-[#131313] scale-95 active:opacity-80 transition-transform">
+<div class="text-xl font-bold tracking-[0.2em] text-[#D4AF37] font-manrope tracking-tighter text-white">
+            NAVAJA DORADA
+        </div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="Barber profile avatar" class="w-full h-full object-cover" data-alt="Close-up portrait of a stylish male barber with a short beard against a dark premium background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr2iu-Ibw2D9WqIviY12Ng8sofH5KqdBlrd6DnME1ESeElBgzqTektMzn8em1gtlT07r8XQKDvCb8jhkZ4KzCaIBmIPNn7167mSwGVUZS6reG2hcSvPCKpjpiPsp5rRrkq1NHzX6zJM0X9Y_CLZc62EdOMv-v2-mjiS6G9rC30lU2ANO90zSvfLITkknSLSL7MJVYsctBDhUHkqe0OC74xZZVNoLWHdio3Rqr2LtlCNKst1sPwsog39Mh8r8pB_BgJI-3fGDmH5bfY"/>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-6 pt-6">
+<!-- Header & Tabs -->
+<div class="mb-8">
+<h1 class="font-headline text-3xl font-bold tracking-tight text-on-surface mb-6">Mis Turnos</h1>
+<div class="flex gap-6 border-b border-outline-variant/15 pb-2">
+<button class="text-on-surface-variant font-label text-sm font-medium pb-2">Activos</button>
+<button class="text-primary font-label text-sm font-medium border-b-2 border-primary pb-2">Historial</button>
+</div>
+</div>
+<!-- Appointments List -->
+<div class="space-y-6">
+<!-- Item 1: Completado + Calificar -->
+<div class="bg-surface-container-low rounded-xl p-5 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline text-lg font-semibold text-on-surface mb-1">Corte de Autor</h3>
+<p class="font-body text-sm text-on-surface-variant">Con Mateo</p>
+</div>
+<div class="text-right">
+<p class="font-headline text-base font-bold text-on-surface">10 Oct</p>
+<p class="font-label text-xs font-medium text-[#4ade80] mt-1 tracking-wider uppercase">Completado</p>
+</div>
+</div>
+<div class="pt-4 mt-2 border-t border-outline-variant/15 flex justify-between items-center">
+<div class="flex gap-1 text-primary/50">
+<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="outline">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="outline">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="outline">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="outline">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" data-weight="outline">star</span>
+</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                        Calificar
+                    </button>
+</div>
+</div>
+<!-- Item 2: Completado + Calificado -->
+<div class="bg-surface-container-low rounded-xl p-5 relative overflow-hidden">
+<div class="flex justify-between items-start mb-4 pl-2">
+<div>
+<h3 class="font-headline text-lg font-semibold text-on-surface mb-1">Ritual de Barba</h3>
+<p class="font-body text-sm text-on-surface-variant">Con Julián</p>
+</div>
+<div class="text-right">
+<p class="font-headline text-base font-bold text-on-surface">25 Sep</p>
+<p class="font-label text-xs font-medium text-[#4ade80] mt-1 tracking-wider uppercase">Completado</p>
+</div>
+</div>
+<div class="pt-4 mt-2 border-t border-outline-variant/15 flex justify-between items-center pl-2">
+<div class="flex gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="font-label text-xs text-on-surface-variant italic">Calificado</span>
+</div>
+</div>
+<!-- Item 3: Cancelado -->
+<div class="bg-surface-container-low rounded-xl p-5 relative overflow-hidden opacity-75">
+<div class="flex justify-between items-start pl-2">
+<div>
+<h3 class="font-headline text-lg font-semibold text-on-surface mb-1">Corte &amp; Barba</h3>
+<p class="font-body text-sm text-on-surface-variant">Con Enzo</p>
+</div>
+<div class="text-right">
+<p class="font-headline text-base font-bold text-on-surface">12 Sep</p>
+<p class="font-label text-xs font-medium text-error mt-1 tracking-wider uppercase">Cancelado</p>
+</div>
+</div>
+</div>
+<!-- Item 4: No-show -->
+<div class="bg-surface-container-low rounded-xl p-5 relative overflow-hidden opacity-50">
+<div class="flex justify-between items-start pl-2">
+<div>
+<h3 class="font-headline text-lg font-semibold text-on-surface mb-1">Perfilado de Cejas</h3>
+<p class="font-body text-sm text-on-surface-variant">Con Mateo</p>
+</div>
+<div class="text-right">
+<p class="font-headline text-base font-bold text-on-surface">01 Sep</p>
+<p class="font-label text-xs font-medium text-on-surface-variant mt-1 tracking-wider uppercase">No-show</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] docked full-width bottom-0 rounded-t-2xl no-line background-color-shift active:scale-90 transition-all duration-200 md:hidden">
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" data-icon="content_cut">content_cut</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Atelier</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" data-icon="dry_cleaning">dry_cleaning</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Services</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#D4AF37] bg-[#2A2A2A] rounded-xl px-4 py-2 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Bookings</span>
+</button>
+<button class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Profile</span>
+</button>
+</nav>
+</body></html>

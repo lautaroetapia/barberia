@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - My Agenda</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#353535",
+                    "on-surface": "#e5e2e1",
+                    "error": "#ffb4ab",
+                    "on-tertiary-fixed-variant": "#27438a",
+                    "secondary-container": "#454747",
+                    "surface": "#131313",
+                    "surface-bright": "#393939",
+                    "on-primary-fixed-variant": "#574500",
+                    "on-tertiary": "#082b72",
+                    "surface-dim": "#131313",
+                    "on-surface-variant": "#d0c5af",
+                    "on-secondary-fixed-variant": "#454747",
+                    "tertiary-fixed": "#dbe1ff",
+                    "surface-container": "#20201f",
+                    "on-primary-fixed": "#241a00",
+                    "on-primary": "#3c2f00",
+                    "primary-container": "#d4af37",
+                    "on-tertiary-container": "#254188",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-tertiary-fixed": "#00174b",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "surface-container-high": "#2a2a2a",
+                    "primary-fixed-dim": "#e9c349",
+                    "primary-fixed": "#ffe088",
+                    "outline": "#99907c",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "error-container": "#93000a",
+                    "tertiary-fixed-dim": "#b4c5ff",
+                    "surface-tint": "#e9c349",
+                    "inverse-on-surface": "#313030",
+                    "primary": "#f2ca50",
+                    "on-primary-container": "#554300",
+                    "outline-variant": "#4d4635",
+                    "on-secondary-container": "#b4b5b5",
+                    "tertiary": "#bfcdff",
+                    "surface-variant": "#353535",
+                    "on-secondary": "#2f3131",
+                    "on-background": "#e5e2e1",
+                    "secondary": "#c6c6c7",
+                    "inverse-surface": "#e5e2e1",
+                    "tertiary-container": "#97b0ff",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary-fixed": "#e2e2e2",
+                    "inverse-primary": "#735c00",
+                    "background": "#131313",
+                    "surface-container-low": "#1c1b1b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-surface');
+            font-family: theme('fontFamily.body');
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, theme('colors.primary') 0%, theme('colors.primary-container') 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-gradient-gold {
+            background: linear-gradient(135deg, theme('colors.primary') 0%, theme('colors.primary-container') 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col pt-16 pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#131313] dark:bg-[#131313] font-manrope tracking-tighter text-white no-line tonal-transition flat no-shadows">
+<button class="text-[#D4AF37] hover:text-[#F2CA50] transition-colors duration-300 scale-95 active:opacity-80 transition-transform">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="text-xl font-bold tracking-[0.2em] text-[#D4AF37]">NAVAJA DORADA</h1>
+<button class="w-8 h-8 rounded-full overflow-hidden scale-95 active:opacity-80 transition-transform">
+<img alt="Barber profile avatar" class="w-full h-full object-cover" data-alt="Close up portrait of a distinguished male barber with a well-groomed beard, wearing a dark apron, moody lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqBP3fpBBSq2HVlHtMfDbDQ8gyxOW7APdE4aw3PmFAebofHGy_9Vs8awhO15ehqVb8YCY55XbpwFXmZWwyx4QRJC3l-44ztOApaDXmUz9psQPT0ofKkFWNNm1-RSkJOeY8_G9bIvPXqosy00FSHcfTe6GMN4ZLTpA1XV-BMiWwuHK-WZhlUXMlEIdV4TTTB1h0oLD5qtHFAoNOH-sbaHEuV-EDpUwEy1AUJzZi9F3Sqi1XS8RtdE1-0Wj_wz7sEFrjs6KUAxe2IR3m"/>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow px-4 md:px-8 max-w-4xl mx-auto w-full flex flex-col gap-8 pb-20">
+<!-- Date Header & Context -->
+<section class="flex flex-col gap-4 mt-6">
+<div class="flex justify-between items-center">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex flex-col items-center">
+<h2 class="font-headline text-2xl font-semibold tracking-tight text-on-surface">Jueves, 24 Oct</h2>
+<span class="font-label text-sm text-on-surface-variant mt-1">10 citas programadas</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<div class="flex justify-center mt-2">
+<span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/30 text-sm font-medium text-primary">
+<span class="material-symbols-outlined text-[16px]" data-icon="location_on">location_on</span>
+                    Barbero · Centro
+                </span>
+</div>
+</section>
+<!-- Agenda Timeline -->
+<section class="flex flex-col gap-6 mt-4">
+<!-- Appointment Card: Completed -->
+<article class="flex gap-4">
+<div class="w-16 flex flex-col items-end pt-1">
+<span class="font-headline font-semibold text-lg text-on-surface-variant">09:00</span>
+</div>
+<div class="flex-grow bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 relative overflow-hidden flex flex-col gap-3">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-surface-variant opacity-50"></div>
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<h3 class="font-headline font-bold text-lg text-on-surface-variant">Carlos M.</h3>
+<p class="font-label text-sm text-on-surface-variant/80">Corte Clásico</p>
+</div>
+<span class="text-on-surface-variant font-medium">$2.500</span>
+</div>
+<div class="flex items-center gap-2 mt-2">
+<span class="w-2 h-2 rounded-full bg-surface-variant"></span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Completado</span>
+</div>
+</div>
+</article>
+<!-- Appointment Card: Active -->
+<article class="flex gap-4">
+<div class="w-16 flex flex-col items-end pt-1">
+<span class="font-headline font-bold text-xl text-primary">10:00</span>
+<span class="font-label text-xs text-primary/80">En progreso</span>
+</div>
+<div class="flex-grow bg-surface-container-high rounded-xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.4)] relative overflow-hidden flex flex-col gap-4">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<h3 class="font-headline font-extrabold text-xl text-white">Mateo R.</h3>
+<p class="font-label text-sm text-on-surface-variant">Corte Clásico + Barba</p>
+</div>
+<span class="text-primary font-bold text-lg">$3.800</span>
+</div>
+<div class="flex gap-3 mt-2">
+<button class="flex-1 bg-gradient-gold text-on-primary font-bold py-2.5 rounded-lg text-sm transition-transform active:scale-95 shadow-[0_4px_15px_rgba(212,175,55,0.2)]">
+                            Completar
+                        </button>
+</div>
+</div>
+</article>
+<!-- Break Slot -->
+<article class="flex gap-4 opacity-70">
+<div class="w-16 flex flex-col items-end pt-2">
+<span class="font-headline font-medium text-on-surface-variant">11:00</span>
+</div>
+<div class="flex-grow flex items-center justify-center py-4 border border-dashed border-outline-variant/30 rounded-xl">
+<span class="font-label text-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="coffee">coffee</span>
+                        Pausa programada (30m)
+                    </span>
+</div>
+</article>
+<!-- Appointment Card: Upcoming -->
+<article class="flex gap-4">
+<div class="w-16 flex flex-col items-end pt-1">
+<span class="font-headline font-semibold text-lg text-on-surface">11:30</span>
+</div>
+<div class="flex-grow bg-surface-container-low rounded-xl p-4 border border-outline-variant/20 relative overflow-hidden flex flex-col gap-4">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-tertiary-container opacity-70"></div>
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<h3 class="font-headline font-bold text-lg text-on-surface">Diego V.</h3>
+<p class="font-label text-sm text-on-surface-variant">Perfilado de Barba</p>
+</div>
+<span class="text-on-surface font-medium">$1.500</span>
+</div>
+<div class="flex gap-2 mt-2">
+<button class="flex-1 bg-surface-container-highest text-primary font-medium py-2 rounded-lg text-sm transition-colors hover:bg-surface-bright">
+                            Iniciar
+                        </button>
+<button class="px-4 bg-transparent border border-outline-variant/30 text-on-surface-variant font-medium py-2 rounded-lg text-sm transition-colors hover:text-error hover:border-error/50">
+                            No asistió
+                        </button>
+</div>
+</div>
+</article>
+</section>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-28 right-6 w-14 h-14 bg-gradient-gold rounded-full flex items-center justify-center text-on-primary shadow-[0_8px_25px_rgba(212,175,55,0.3)] hover:scale-105 active:scale-95 transition-all z-40">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+<!-- Footer Summary -->
+<div class="fixed bottom-16 left-0 w-full bg-surface-container-high/95 backdrop-blur-md border-t border-outline-variant/10 py-3 px-6 z-40">
+<div class="max-w-4xl mx-auto flex justify-between items-center">
+<span class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Total hoy</span>
+<span class="font-headline font-bold text-lg text-gradient">$15.000</span>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl rounded-t-2xl no-line background-color-shift shadow-[0_-4px_30px_rgba(0,0,0,0.5)] md:hidden">
+<!-- Active Tab: Atelier (Mapped to Agenda) -->
+<a class="flex flex-col items-center justify-center text-[#D4AF37] bg-[#2A2A2A] rounded-xl px-4 py-2 hover:text-white transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="content_cut" data-weight="fill" style="font-variation-settings: 'FILL' 1;">content_cut</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest text-[#D4AF37]">Atelier</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dry_cleaning">dry_cleaning</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest">Services</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest">Bookings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 px-4 py-2 hover:text-white transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest">Profile</span>
+</a>
+</nav>
+</body></html>

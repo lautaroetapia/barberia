@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Elegí horario</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#e9c349",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "on-secondary": "#2f3131",
+                        "on-surface-variant": "#a3a3a3",
+                        "on-error": "#690005",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#00174b",
+                        "on-secondary-container": "#b4b5b5",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "surface-container-lowest": "#0e0e0e",
+                        "inverse-surface": "#e5e2e1",
+                        "on-surface": "#ffffff",
+                        "error-container": "#93000a",
+                        "on-tertiary": "#082b72",
+                        "surface-dim": "#1A1A1A",
+                        "secondary": "#c6c6c7",
+                        "surface-variant": "#2a2a2a",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#454747",
+                        "primary": "#D4AF37",
+                        "outline": "#4d4d4d",
+                        "on-primary-fixed-variant": "#574500",
+                        "secondary-fixed": "#e2e2e2",
+                        "background": "#1A1A1A",
+                        "surface-container-low": "#222222",
+                        "surface-container-highest": "#333333",
+                        "surface-bright": "#393939",
+                        "on-primary": "#1A1A1A",
+                        "on-primary-container": "#ffe088",
+                        "on-tertiary-container": "#254188",
+                        "tertiary-container": "#97b0ff",
+                        "primary-fixed-dim": "#e9c349",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-fixed": "#ffe088",
+                        "on-secondary-fixed-variant": "#454747",
+                        "on-primary-fixed": "#241a00",
+                        "tertiary": "#bfcdff",
+                        "surface-container": "#262626",
+                        "outline-variant": "#4d4d4d",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-fixed": "#dbe1ff",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "primary-container": "#4a3d13",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "on-background": "#ffffff",
+                        "inverse-primary": "#735c00",
+                        "surface": "#1A1A1A"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: theme('colors.surface');
+            color: theme('colors.on-surface');
+        }
+        
+        /* Progress Bar Styles */
+        .step-active { color: theme('colors.primary'); border-color: theme('colors.primary'); }
+        .step-completed { color: theme('colors.primary'); border-color: theme('colors.primary'); }
+        .step-inactive { color: theme('colors.surface-variant'); border-color: theme('colors.surface-variant'); }
+        
+        .line-completed { background-color: theme('colors.primary'); }
+        .line-inactive { background-color: theme('colors.surface-variant'); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body antialiased min-h-screen flex flex-col relative pb-32">
+<!-- Top Navigation (Transactional Layout - Hidden bottom nav, custom top nav) -->
+<header class="sticky top-0 z-50 bg-surface/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="font-headline text-xl font-bold tracking-tight text-on-surface">Elegí horario</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<!-- Urgency Banner -->
+<div class="bg-surface-container-high px-6 py-3 flex items-center justify-center space-x-2 border-b border-surface-container-lowest/50 shadow-[0_4px_30px_rgba(0,0,0,0.3)] relative z-40">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="font-label text-sm text-primary font-medium tracking-wide">Completá en 09:59</span>
+</div>
+<!-- Main Canvas -->
+<main class="flex-1 px-6 pt-6 pb-8 space-y-10">
+<!-- Progress Stepper -->
+<div class="w-full flex items-center justify-between relative px-2">
+<!-- Background Lines -->
+<div class="absolute top-1/2 left-0 w-full h-[2px] -translate-y-1/2 flex z-0 px-6">
+<div class="w-1/4 line-completed"></div>
+<div class="w-1/4 line-completed"></div>
+<div class="w-1/4 line-completed"></div>
+<div class="w-1/4 line-inactive"></div>
+</div>
+<!-- Step 1: Service (Completed) -->
+<div class="relative z-10 flex flex-col items-center bg-surface px-1">
+<div class="w-6 h-6 rounded-full border-2 step-completed bg-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] step-completed" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<!-- Step 2: Barber (Completed) -->
+<div class="relative z-10 flex flex-col items-center bg-surface px-1">
+<div class="w-6 h-6 rounded-full border-2 step-completed bg-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] step-completed" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<!-- Step 3: Date (Completed) -->
+<div class="relative z-10 flex flex-col items-center bg-surface px-1">
+<div class="w-6 h-6 rounded-full border-2 step-completed bg-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] step-completed" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<!-- Step 4: Time (Active) -->
+<div class="relative z-10 flex flex-col items-center bg-surface px-1">
+<div class="w-6 h-6 rounded-full border-2 step-active bg-surface flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+</div>
+<span class="absolute top-8 font-label text-[10px] uppercase tracking-widest text-primary font-bold whitespace-nowrap">Horario</span>
+</div>
+<!-- Step 5: Confirm (Inactive) -->
+<div class="relative z-10 flex flex-col items-center bg-surface px-1">
+<div class="w-6 h-6 rounded-full border-2 step-inactive bg-surface flex items-center justify-center">
+</div>
+</div>
+</div>
+<!-- Calendar Section -->
+<section class="space-y-6 pt-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Octubre 2023</h2>
+<div class="flex space-x-2">
+<button class="w-8 h-8 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface hover:text-white transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:text-white transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Minimal Calendar Grid -->
+<div class="bg-surface-container-low rounded-2xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] border border-outline-variant">
+<div class="grid grid-cols-7 gap-1 mb-4 text-center">
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Do</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Lu</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Ma</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Mi</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Ju</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Vi</span>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-wider">Sa</span>
+</div>
+<!-- Simplistic hardcoded month for visual -->
+<div class="grid grid-cols-7 gap-y-4 gap-x-1 text-center font-body text-sm">
+<!-- Empty slots -->
+<div class="p-2"></div>
+<div class="p-2"></div>
+<!-- Days -->
+<div class="p-2 text-on-surface-variant/50">1</div>
+<div class="p-2 text-on-surface-variant/50">2</div>
+<div class="p-2 text-on-surface-variant/50">3</div>
+<div class="p-2 text-on-surface-variant/50">4</div>
+<div class="p-2 text-on-surface-variant/50">5</div>
+<div class="p-2 text-on-surface-variant/50">6</div>
+<div class="p-2 text-on-surface-variant/50">7</div>
+<div class="p-2 text-on-surface-variant/50">8</div>
+<div class="p-2 text-on-surface">9</div>
+<div class="p-2 text-on-surface">10</div>
+<div class="p-2 text-on-surface">11</div>
+<div class="p-2 text-on-surface">12</div>
+<div class="p-2 text-on-surface">13</div>
+<div class="p-2 text-on-surface">14</div>
+<div class="p-2 text-on-surface">15</div>
+<!-- Selected Day -->
+<div class="relative flex justify-center items-center">
+<div class="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-on-primary font-bold shadow-[0_0_15px_rgba(212,175,55,0.4)]">16</div>
+</div>
+<div class="p-2 text-on-surface">17</div>
+<div class="p-2 text-on-surface">18</div>
+<div class="p-2 text-on-surface">19</div>
+<div class="p-2 text-on-surface">20</div>
+<div class="p-2 text-on-surface">21</div>
+<div class="p-2 text-on-surface">22</div>
+<div class="p-2 text-on-surface">23</div>
+<div class="p-2 text-on-surface">24</div>
+<div class="p-2 text-on-surface">25</div>
+<div class="p-2 text-on-surface">26</div>
+</div>
+</div>
+</section>
+<!-- Time Selection -->
+<section class="space-y-6">
+<h3 class="font-headline text-lg font-bold text-on-surface">Turnos disponibles</h3>
+<!-- Morning -->
+<div class="space-y-3">
+<span class="font-label text-xs uppercase tracking-widest text-on-surface-variant">Mañana</span>
+<div class="grid grid-cols-3 gap-3">
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center">09:00</button>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center">09:45</button>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center">10:30</button>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface-variant opacity-30 rounded-xl py-3 px-4 font-body text-sm cursor-not-allowed text-center line-through decoration-on-surface-variant decoration-2">11:15</button>
+</div>
+</div>
+<!-- Afternoon -->
+<div class="space-y-3">
+<span class="font-label text-xs uppercase tracking-widest text-on-surface-variant">Tarde</span>
+<div class="grid grid-cols-3 gap-3">
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center">14:00</button>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center">14:45</button>
+<!-- Active Time Slot -->
+<div class="relative">
+<button class="w-full bg-primary/10 border border-primary text-primary rounded-xl py-3 px-4 font-body text-sm font-bold shadow-[0_4px_20px_rgba(212,175,55,0.15)] text-center">16:30</button>
+<div class="absolute -bottom-6 left-0 w-full text-center">
+<span class="font-label text-[10px] text-primary italic opacity-80">Terminarás aprox. 17:15</span>
+</div>
+</div>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center mt-6">17:15</button>
+<button class="bg-surface-container-low border border-outline-variant text-on-surface rounded-xl py-3 px-4 font-body text-sm hover:bg-surface-container-high transition-colors text-center mt-6">18:00</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full z-50 bg-surface/95 backdrop-blur-xl px-6 py-6 border-t border-surface-container-lowest shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+<button class="w-full bg-primary text-on-primary font-headline text-lg font-bold py-4 rounded-xl shadow-[0_4px_30px_rgba(212,175,55,0.3)] hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center space-x-2">
+<span>Siguiente</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</body></html>

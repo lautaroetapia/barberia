@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Unirse a barbería - Navaja Dorada</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface": "#131313",
+                        "surface-tint": "#e9c349",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-variant": "#353535",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "secondary": "#c6c6c7",
+                        "on-secondary": "#2f3131",
+                        "on-background": "#e5e2e1",
+                        "primary-fixed-dim": "#e9c349",
+                        "surface-bright": "#393939",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-primary-fixed-variant": "#574500",
+                        "on-error-container": "#ffdad6",
+                        "error": "#ffb4ab",
+                        "inverse-surface": "#e5e2e1",
+                        "inverse-primary": "#735c00",
+                        "primary": "#f2ca50",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "outline-variant": "#4d4635",
+                        "surface-container-high": "#2a2a2a",
+                        "on-primary": "#3c2f00",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-primary-fixed": "#241a00",
+                        "error-container": "#93000a",
+                        "on-tertiary-container": "#254188",
+                        "secondary-container": "#454747",
+                        "on-surface-variant": "#d0c5af",
+                        "outline": "#99907c",
+                        "background": "#131313",
+                        "on-tertiary-fixed": "#00174b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary": "#082b72",
+                        "surface-dim": "#131313",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "primary-fixed": "#ffe088",
+                        "on-surface": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "tertiary": "#bfcdff",
+                        "primary-container": "#d4af37",
+                        "on-primary-container": "#554300",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "tertiary-fixed": "#dbe1ff",
+                        "surface-container": "#20201f",
+                        "on-error": "#690005",
+                        "tertiary-container": "#97b0ff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased pb-24 pt-20">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#131313]/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-none flex items-center justify-between px-6 py-4">
+<div class="flex items-center gap-4 w-full">
+<button class="text-neutral-500 hover:text-[#F2CA50] transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">arrow_back</span>
+</button>
+<h1 class="font-manrope font-bold tracking-tighter uppercase text-lg text-on-surface">Unirse a barbería</h1>
+</div>
+</header>
+<main class="px-6 space-y-12">
+<!-- Section 1: Code -->
+<section class="space-y-6">
+<div class="space-y-2">
+<h2 class="font-headline text-2xl font-semibold tracking-tight text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'wght' 300;">pin</span>
+                    Tengo un código
+                </h2>
+<p class="font-body text-sm text-on-surface-variant leading-relaxed">
+                    Ingresá el código de 6 dígitos que te dio el dueño para vincularte directamente.
+                </p>
+</div>
+<div class="space-y-4">
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline-variant text-on-surface font-body text-lg py-3 px-4 focus:ring-0 focus:border-primary transition-colors placeholder:text-on-surface-variant/50 text-center tracking-[0.5em] uppercase" maxlength="6" placeholder="Ej: 1A2B3C" type="text"/>
+</div>
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-bold text-lg py-4 px-6 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+<span>Verificar código</span>
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'wght' 600;">check_circle</span>
+</button>
+</div>
+</section>
+<!-- Separation (No Line, Spacing Only) -->
+<div class="h-8"></div>
+<!-- Section 2: Search -->
+<section class="space-y-8">
+<div class="space-y-4">
+<h2 class="font-headline text-2xl font-semibold tracking-tight text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'wght' 300;">search</span>
+                    Buscar barbería
+                </h2>
+<p class="font-body text-sm text-on-surface-variant leading-relaxed">
+                    Buscá tu barbería por nombre o dirección si no tenés un código de invitación.
+                </p>
+<div class="relative group">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline-variant text-on-surface font-body py-3 pl-12 pr-4 focus:ring-0 focus:border-primary transition-colors placeholder:text-on-surface-variant/50" placeholder="Nombre o dirección..." type="text"/>
+</div>
+</div>
+<!-- Results -->
+<div class="space-y-4">
+<!-- Result Card 1 -->
+<div class="bg-surface-container-low rounded-xl p-4 flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/20">
+<img alt="Barbershop logo" class="w-full h-full object-cover" data-alt="Classic vintage barbershop logo with golden scissors on dark background, sharp focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4yuAMp0pMEI538VRGlkzegrHiG0NvmBsCO5Ayv3VuA4dLXqkwOMX6UF48KsY57U1YBANQKc7VoDCS5WvoG16AogFgsyq9P_KL_9zkOWo8tUvy3vXvmRjdWH_zKiEgSHvzjBBfXKfTyOzOsRMXZadSbVNUU3b7kFi75R9pF_TPIL38Kt51DROliWkCEDoWuBnazsevENFZW67LnpL9DRSyZ3MHv07Lw6TXXPCij0Y2GsX4uY9jUB74QscVHQhra2XFzLdAQojYkFGh"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-headline font-semibold text-lg text-on-surface truncate">The Gentlemen's Cut</h3>
+<p class="font-body text-sm text-on-surface-variant truncate flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Av. del Libertador 1234
+                            </p>
+</div>
+</div>
+<button class="w-full bg-surface-container-highest text-primary font-headline font-semibold py-3 rounded-lg hover:bg-surface-bright transition-colors active:scale-[0.98]">
+                        Solicitar unirme
+                    </button>
+</div>
+<!-- Result Card 2 -->
+<div class="bg-surface-container-low rounded-xl p-4 flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/20">
+<img alt="Barbershop logo" class="w-full h-full object-cover" data-alt="Modern minimalist barbershop logo with clean typography on black background, high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-OGDJ62QVuz8D1seSouLEG9mB3ly9m54jCPo1hNPVkw9Q54JEsgb4JWpIoml1dJSXTWL9onoKUD4TY8j5WEoi87VVGQckGi6OaS2_6alL8x0gyAUiiHYypv7TCCvi0OUmerI2xf6IJ-GoNtoS0lBbrtoxPavKE1gyoYYv7e5fp7J0bixWyA1HOaPzS4KhKn_Xf4WOjJT2K0ZI6BY3iZQnNU0M4VpA2TQg77kbYudd5xMYyRzcGoNvRqp0LUHloR6qBkLUj1ILQu33"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-headline font-semibold text-lg text-on-surface truncate">Obsidian Grooming</h3>
+<p class="font-body text-sm text-on-surface-variant truncate flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Palermo Soho, 456
+                            </p>
+</div>
+</div>
+<button class="w-full bg-surface-container-highest text-primary font-headline font-semibold py-3 rounded-lg hover:bg-surface-bright transition-colors active:scale-[0.98]">
+                        Solicitar unirme
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-[#131313]/80 dark:bg-neutral-950/80 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.5)] md:hidden flex justify-around items-center px-4 pb-6 pt-2">
+<a class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">calendar_today</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Agenda</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">history</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Historial</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-600 p-2 hover:text-[#F2CA50] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'wght' 300;">group</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Clientes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#D4AF37] p-2 relative after:content-[''] after:absolute after:bottom-0 after:w-1 after:h-1 after:bg-[#D4AF37] after:rounded-full hover:text-[#F2CA50] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1, 'wght' 400;">person</span>
+<span class="font-inter text-[10px] font-medium tracking-wide">Perfil</span>
+</a>
+</nav>
+</body></html>

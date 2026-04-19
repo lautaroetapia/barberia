@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Booking Success</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#20201f",
+                        "tertiary": "#bfcdff",
+                        "outline-variant": "#4d4635",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-fixed": "#ffe088",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "on-primary-fixed-variant": "#574500",
+                        "tertiary-fixed": "#dbe1ff",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed": "#241a00",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "inverse-on-surface": "#313030",
+                        "inverse-primary": "#735c00",
+                        "on-secondary-fixed-variant": "#454747",
+                        "on-tertiary": "#082b72",
+                        "error": "#ffb4ab",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#254188",
+                        "on-surface-variant": "#d0c5af",
+                        "surface": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "background": "#131313",
+                        "surface-dim": "#131313",
+                        "primary-container": "#d4af37",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#e2e2e2",
+                        "outline": "#99907c",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "secondary": "#c6c6c7",
+                        "primary": "#f2ca50",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-fixed-dim": "#e9c349",
+                        "on-primary-container": "#554300",
+                        "on-primary": "#3c2f00",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-container": "#454747",
+                        "surface-variant": "#353535",
+                        "on-secondary": "#2f3131",
+                        "tertiary-container": "#97b0ff",
+                        "on-tertiary-fixed": "#00174b",
+                        "surface-tint": "#e9c349",
+                        "surface-bright": "#393939",
+                        "on-error-container": "#ffdad6"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #131313; color: #e5e2e1; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col justify-between">
+<!-- Top Navigation (Transactional intent, suppressed shell, custom top bar for success) -->
+<header class="flex justify-center items-center px-6 py-6 w-full fixed top-0 z-40 bg-surface-container-lowest/80 backdrop-blur-md pb-safe border-b-0">
+<div class="text-primary font-headline font-black tracking-widest text-lg uppercase">
+            NAVAJA DORADA
+         </div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center px-6 pt-24 pb-32">
+<!-- Success Iconography -->
+<div class="relative w-32 h-32 mb-8 flex items-center justify-center">
+<!-- Decorative razor circle outline -->
+<div class="absolute inset-0 rounded-full border border-primary/30 flex items-center justify-center before:content-[''] before:absolute before:-inset-2 before:rounded-full before:border-[0.5px] before:border-primary/10"></div>
+<!-- Core Icon -->
+<div class="w-20 h-20 bg-gradient-to-br from-primary to-primary-container rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(212,175,55,0.4)]">
+<span class="material-symbols-outlined text-on-primary text-5xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">
+                    check
+                </span>
+</div>
+</div>
+<!-- Headline -->
+<h1 class="font-headline text-[32px] leading-tight font-extrabold text-on-surface mb-2 text-center tracking-[-0.02em]">
+            ¡Turno confirmado!
+        </h1>
+<p class="font-body text-on-surface-variant text-base mb-10 text-center max-w-xs">
+            Carlos, tu experiencia en el atelier está reservada.
+        </p>
+<!-- Details Card -->
+<div class="w-full bg-surface-container-low rounded-xl p-6 mb-8 relative overflow-hidden group">
+<!-- Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="space-y-6 relative z-10">
+<!-- Location -->
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">location_on</span>
+<div>
+<h3 class="font-label text-sm text-on-surface-variant uppercase tracking-wider mb-1">Atelier</h3>
+<p class="font-body text-lg text-on-surface font-medium">Atelier Palermo</p>
+</div>
+</div>
+<!-- Service & Barber -->
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">content_cut</span>
+<div>
+<h3 class="font-label text-sm text-on-surface-variant uppercase tracking-wider mb-1">Servicio</h3>
+<p class="font-body text-lg text-on-surface font-medium">Corte de Autor + Arreglo de Barba</p>
+<p class="font-body text-sm text-on-surface-variant mt-1 italic">con Maestro Barbero</p>
+</div>
+</div>
+<!-- Date & Time -->
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">schedule</span>
+<div>
+<h3 class="font-label text-sm text-on-surface-variant uppercase tracking-wider mb-1">Fecha y Hora</h3>
+<p class="font-body text-lg text-on-surface font-medium">Jueves, 24 Octubre</p>
+<p class="font-body text-xl text-primary font-bold mt-1">18:30 h</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Check-in QR Code Area -->
+<div class="w-full bg-surface-container-high rounded-xl p-6 mb-10 flex flex-col items-center justify-center border border-outline-variant/15">
+<p class="font-label text-xs text-on-surface-variant uppercase tracking-widest mb-4 text-center">Pase de Acceso</p>
+<div class="w-32 h-32 bg-white rounded-lg p-2 flex items-center justify-center">
+<img alt="QR Code" class="w-full h-full object-cover" data-alt="high contrast abstract geometric pattern resembling a sophisticated qr code in black and white minimalist style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtbD5fuU3eQdJ2etKS4PhyudpbfYolKIYCn-pqoYVdm_cZGc8xa-70K1_Dvi7nCTXGFowQPDmCMsSiSb8wLS8mJodefy75bVlnZpbmUHSVJQ7_SQOaJyoBOR0SBTzasu-0Z8XgBFqC8fg5BjDG1Qsvvyr6hESpFv9Oul-fLsE6vSnl6dsV1EauvN6RPCGP0RoMg__d9f2OkmWIQgIlTKojzLz99litp2VU4Z25MMrMFOs3hLkDqVaQ0eUq-a6-filQyX54O9QSka-x"/>
+</div>
+<p class="font-body text-sm text-on-surface-variant mt-4 text-center">Presenta este código al llegar al atelier.</p>
+</div>
+</main>
+<!-- Fixed Action Bar -->
+<div class="fixed bottom-0 left-0 right-0 p-6 bg-surface-container-lowest/90 backdrop-blur-xl border-t-0 z-30 pb-safe">
+<div class="flex flex-col gap-3 max-w-md mx-auto w-full">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-label font-bold py-4 px-6 rounded-xl text-lg hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
+<span class="material-symbols-outlined">calendar_add_on</span>
+                Agregar a Calendario
+            </button>
+<button class="w-full bg-surface-container-highest text-primary font-label font-semibold py-4 px-6 rounded-xl text-base hover:bg-surface-variant transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined">share</span>
+                Compartir
+            </button>
+</div>
+</div>
+<!-- Modal Overlay (Notifications) -->
+<div class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+<div class="bg-surface-container-high w-full max-w-sm rounded-2xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-outline-variant/15 relative overflow-hidden">
+<!-- Modal decorative background glow -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+<div class="flex justify-center mb-6 relative z-10">
+<div class="w-16 h-16 bg-surface-container-lowest rounded-full flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-primary text-3xl">notifications_active</span>
+</div>
+</div>
+<h2 class="font-headline text-2xl font-bold text-on-surface text-center mb-3 relative z-10">¿Activar notificaciones?</h2>
+<p class="font-body text-on-surface-variant text-center mb-8 relative z-10 text-sm">
+                 Te avisaremos 24 horas antes de tu cita y te mantendremos informado sobre beneficios exclusivos del atelier.
+             </p>
+<div class="flex flex-col gap-3 relative z-10">
+<button class="w-full bg-primary text-on-primary font-label font-bold py-3 px-4 rounded-xl hover:bg-primary-container transition-colors">
+                     Sí, avisarme
+                 </button>
+<button class="w-full bg-transparent text-primary font-label py-3 px-4 rounded-xl border border-primary/30 hover:bg-primary/10 transition-colors">
+                     Después
+                 </button>
+</div>
+</div>
+</div>
+</body></html>

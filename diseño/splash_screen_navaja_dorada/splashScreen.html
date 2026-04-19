@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Splash Screen</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#97b0ff",
+                        "surface-bright": "#393939",
+                        "surface-tint": "#e9c349",
+                        "on-secondary-fixed-variant": "#454747",
+                        "error-container": "#93000a",
+                        "secondary": "#c6c6c7",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed-dim": "#e9c349",
+                        "inverse-surface": "#e5e2e1",
+                        "on-primary-container": "#554300",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "on-secondary-container": "#b4b5b5",
+                        "secondary-fixed": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "on-background": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "outline-variant": "#4d4635",
+                        "surface-container-highest": "#353535",
+                        "on-primary-fixed": "#241a00",
+                        "outline": "#99907c",
+                        "surface": "#131313",
+                        "tertiary": "#bfcdff",
+                        "inverse-on-surface": "#313030",
+                        "on-surface-variant": "#d0c5af",
+                        "inverse-primary": "#735c00",
+                        "surface-container": "#20201f",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "primary-container": "#d4af37",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "background": "#131313",
+                        "on-primary": "#3c2f00",
+                        "on-tertiary-container": "#254188",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#dbe1ff",
+                        "primary": "#f2ca50",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary": "#082b72",
+                        "surface-container-low": "#1c1b1b",
+                        "on-tertiary-fixed": "#00174b",
+                        "surface-variant": "#353535",
+                        "primary-fixed": "#ffe088",
+                        "on-primary-fixed-variant": "#574500",
+                        "surface-dim": "#131313",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#2f3131"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body h-screen w-screen flex flex-col justify-center items-center overflow-hidden">
+<div class="flex flex-col items-center justify-center flex-grow w-full px-6">
+<div class="mb-12 relative flex justify-center items-center">
+<div class="absolute w-64 h-64 bg-surface-container-lowest rounded-full opacity-40 blur-[50px]"></div>
+<span class="material-symbols-outlined text-[120px] text-primary-container transform -rotate-45" style="font-variation-settings: 'FILL' 0, 'wght' 200;">
+                content_cut
+            </span>
+</div>
+<h1 class="font-headline font-extrabold text-4xl text-primary-container tracking-[-0.02em] uppercase text-center mb-4">
+            Navaja Dorada
+        </h1>
+<div class="w-12 h-[2px] bg-primary rounded-full mb-12 opacity-80"></div>
+</div>
+<div class="pb-safe mb-12 text-center w-full">
+<p class="font-body text-sm text-on-surface-variant/60 tracking-widest uppercase">
+            Cargando...
+        </p>
+</div>
+</body></html>

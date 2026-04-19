@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#dbe1ff",
+                        "surface-container-lowest": "#0e0e0e",
+                        "tertiary-container": "#97b0ff",
+                        "on-tertiary-fixed": "#00174b",
+                        "surface-dim": "#131313",
+                        "surface-bright": "#393939",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#454747",
+                        "inverse-surface": "#e5e2e1",
+                        "on-surface-variant": "#d0c5af",
+                        "on-error-container": "#ffdad6",
+                        "surface": "#131313",
+                        "primary": "#f2ca50",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "secondary-container": "#454747",
+                        "on-primary-fixed": "#241a00",
+                        "surface-tint": "#e9c349",
+                        "primary-container": "#d4af37",
+                        "outline-variant": "#4d4635",
+                        "inverse-on-surface": "#313030",
+                        "on-error": "#690005",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary-container": "#554300",
+                        "primary-fixed-dim": "#e9c349",
+                        "primary-fixed": "#ffe088",
+                        "on-tertiary-fixed-variant": "#27438a",
+                        "tertiary-fixed-dim": "#b4c5ff",
+                        "on-primary": "#3c2f00",
+                        "error": "#ffb4ab",
+                        "tertiary": "#bfcdff",
+                        "inverse-primary": "#735c00",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-tertiary-container": "#254188",
+                        "secondary": "#c6c6c7",
+                        "on-primary-fixed-variant": "#574500",
+                        "on-tertiary": "#082b72",
+                        "background": "#131313",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#20201f",
+                        "on-secondary": "#2f3131",
+                        "surface-variant": "#353535",
+                        "outline": "#99907c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+        
+        /* Ambient shadows logic */
+        .ambient-glow {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Gold CTA Gradient */
+        .gold-gradient {
+            background: linear-gradient(135deg, #f2ca50 0%, #d4af37 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased pb-24 selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#131313]/90 backdrop-blur-lg shadow-[0_20px_50px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 py-4 w-full">
+<button class="text-white/60 hover:text-[#F2CA50] transition-colors active:scale-95 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+<h1 class="text-lg font-black tracking-widest text-[#D4AF37] font-manrope uppercase">NAVAJA DORADA</h1>
+<button class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant/30 active:scale-95 transition-transform">
+<img alt="Barber profile" class="w-full h-full object-cover" data-alt="close up portrait of a male barber with a trimmed beard looking professional in cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-gShRIXoAB9uLCNYdDnp5OwO3Buw86RltNYz7jQR7jRoYclyu8mxhPPR_Yq4BG0szG4I-CTRNiTPYxdDsMYztxw4E8s_6ZcD7yjCEWVJHNc-DV5_gqo4JXxOhXVDsHV8wf5m1tmQiLbLdoTfeF_T3B4XAty3Kome2hXGXbmh1uDRuYXU-5I7ZIQGPXKFiLT6MAI-PkHyvocQmmh2bOzPWzp7jlLgmLjDvBPaluMennCUFRiclN6oyA9MMvvlpDu4uteupVxmL5Lmv"/>
+</button>
+</header>
+<main class="pt-24 px-6 max-w-md mx-auto relative z-10">
+<!-- Dashboard Header Context -->
+<div class="mb-8 flex justify-between items-end">
+<div>
+<h2 class="font-headline text-3xl font-bold tracking-tight text-on-surface mb-1">Dashboard</h2>
+<p class="font-body text-sm text-on-surface-variant flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
+                    Dueño · Centro
+                </p>
+</div>
+<p class="font-body text-xs text-on-surface-variant/60 uppercase tracking-widest">Hoy</p>
+</div>
+<!-- KPIs: Asymmetric Bento Layout -->
+<section class="grid grid-cols-2 gap-4 mb-10">
+<!-- Ventas Hoy (Featured) -->
+<div class="col-span-2 bg-surface-container-high rounded-xl p-5 relative overflow-hidden flex flex-col justify-between">
+<!-- Decorative gold accent -->
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+<span class="text-xs font-label text-primary bg-primary/10 px-2 py-1 rounded">+12%</span>
+</div>
+<div>
+<p class="font-label text-xs text-on-surface-variant uppercase tracking-wider mb-1">Ventas Hoy</p>
+<p class="font-headline text-3xl font-bold text-on-surface">$45.500</p>
+</div>
+</div>
+<!-- Turnos Hoy -->
+<div class="bg-surface-container-high rounded-xl p-5 relative">
+<div class="mb-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">calendar_today</span>
+</div>
+<p class="font-label text-xs text-on-surface-variant uppercase tracking-wider mb-1">Turnos</p>
+<p class="font-headline text-2xl font-bold text-on-surface">12</p>
+</div>
+<!-- Ocupación -->
+<div class="bg-surface-container-high rounded-xl p-5 relative">
+<div class="mb-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">pie_chart</span>
+</div>
+<p class="font-label text-xs text-on-surface-variant uppercase tracking-wider mb-1">Ocupación</p>
+<p class="font-headline text-2xl font-bold text-on-surface">85%</p>
+</div>
+</section>
+<!-- Próximos Turnos Section -->
+<section>
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-xl font-bold text-on-surface">Próximos Turnos</h3>
+<button class="text-primary text-sm font-label flex items-center gap-1 hover:text-primary-container transition-colors">
+                    Ver todos <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="space-y-4">
+<!-- Appointment Card 1 (Active) -->
+<div class="bg-surface-container-low rounded-xl p-4 flex gap-4 items-center relative">
+<!-- Active marker -->
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-10 bg-primary rounded-r-full"></div>
+<div class="flex-shrink-0 text-center w-12">
+<p class="font-headline text-lg font-bold text-primary">14:30</p>
+</div>
+<div class="flex-grow pl-2">
+<p class="font-headline font-bold text-on-surface">Martín Rodríguez</p>
+<p class="font-body text-sm text-on-surface-variant">Corte Premium + Barba</p>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">more_horiz</span>
+</button>
+</div>
+<!-- Appointment Card 2 -->
+<div class="bg-surface-container-low rounded-xl p-4 flex gap-4 items-center">
+<div class="flex-shrink-0 text-center w-12">
+<p class="font-headline text-lg font-bold text-on-surface-variant">15:15</p>
+</div>
+<div class="flex-grow pl-2">
+<p class="font-headline font-bold text-on-surface">Lucas Silva</p>
+<p class="font-body text-sm text-on-surface-variant">Solo Barba</p>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">more_horiz</span>
+</button>
+</div>
+<!-- Appointment Card 3 -->
+<div class="bg-surface-container-low rounded-xl p-4 flex gap-4 items-center">
+<div class="flex-shrink-0 text-center w-12">
+<p class="font-headline text-lg font-bold text-on-surface-variant">16:00</p>
+</div>
+<div class="flex-grow pl-2">
+<p class="font-headline font-bold text-on-surface">Diego Alonso</p>
+<p class="font-body text-sm text-on-surface-variant">Corte Clásico</p>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">more_horiz</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#0E0E0E]/95 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] bg-gradient-to-t from-[#131313] to-transparent flex justify-around items-center h-20 px-4 w-full">
+<!-- Dashboard (Active Semantic Default since intent is owner overview) -->
+<button class="flex flex-col items-center gap-1 text-[#D4AF37] font-bold active:scale-90 duration-200 hover:text-white/80 transition-all group">
+<span class="material-symbols-outlined fill text-2xl group-hover:-translate-y-1 transition-transform">dashboard</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest">Dashboard</span>
+</button>
+<!-- Agenda -->
+<button class="flex flex-col items-center gap-1 text-white/40 active:scale-90 duration-200 hover:text-white/80 transition-all group">
+<span class="material-symbols-outlined text-2xl group-hover:-translate-y-1 transition-transform">calendar_month</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest">Agenda</span>
+</button>
+<!-- Barberos -->
+<button class="flex flex-col items-center gap-1 text-white/40 active:scale-90 duration-200 hover:text-white/80 transition-all group">
+<span class="material-symbols-outlined text-2xl group-hover:-translate-y-1 transition-transform">content_cut</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest">Barberos</span>
+</button>
+<!-- Profile / Atelier (Mapping to JSON 'Atelier' as per blueprint structure fallback) -->
+<button class="flex flex-col items-center gap-1 text-white/40 active:scale-90 duration-200 hover:text-white/80 transition-all group">
+<span class="material-symbols-outlined text-2xl group-hover:-translate-y-1 transition-transform">dry_cleaning</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest">Servicios</span>
+</button>
+<!-- Más -->
+<button class="flex flex-col items-center gap-1 text-white/40 active:scale-90 duration-200 hover:text-white/80 transition-all group">
+<span class="material-symbols-outlined text-2xl group-hover:-translate-y-1 transition-transform">more_horiz</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest">Más</span>
+</button>
+</nav>
+</body></html>

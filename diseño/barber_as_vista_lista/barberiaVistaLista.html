@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Barberías</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#ffe088",
+                    "on-surface": "#e5e2e1",
+                    "primary-container": "#d4af37",
+                    "on-surface-variant": "#d0c5af",
+                    "on-error": "#690005",
+                    "inverse-surface": "#e5e2e1",
+                    "background": "#131313",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary": "#2f3131",
+                    "surface-container": "#20201f",
+                    "on-secondary-container": "#b4b5b5",
+                    "primary": "#f2ca50",
+                    "tertiary-container": "#97b0ff",
+                    "outline": "#99907c",
+                    "on-tertiary-fixed": "#00174b",
+                    "on-primary-fixed": "#241a00",
+                    "tertiary-fixed": "#dbe1ff",
+                    "surface-bright": "#393939",
+                    "secondary": "#c6c6c7",
+                    "primary-fixed-dim": "#e9c349",
+                    "on-secondary-fixed-variant": "#454747",
+                    "on-primary-container": "#554300",
+                    "surface-container-high": "#2a2a2a",
+                    "surface-container-low": "#1c1b1b",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "secondary-fixed": "#e2e2e2",
+                    "outline-variant": "#4d4635",
+                    "on-primary-fixed-variant": "#574500",
+                    "error-container": "#93000a",
+                    "inverse-primary": "#735c00",
+                    "tertiary-fixed-dim": "#b4c5ff",
+                    "tertiary": "#bfcdff",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-primary": "#3c2f00",
+                    "on-background": "#e5e2e1",
+                    "surface": "#131313",
+                    "on-tertiary-fixed-variant": "#27438a",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "inverse-on-surface": "#313030",
+                    "on-tertiary-container": "#254188",
+                    "surface-tint": "#e9c349",
+                    "secondary-container": "#454747",
+                    "surface-dim": "#131313",
+                    "error": "#ffb4ab",
+                    "surface-variant": "#353535",
+                    "surface-container-highest": "#353535",
+                    "on-tertiary": "#082b72"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Manrope", "sans-serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Inter", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+          font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col pt-16 pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#131313] dark:bg-[#131313] docked full-width top-0 no-line tonal-transition flat no-shadows">
+<h1 class="font-headline tracking-[0.2em] text-[#D4AF37] text-xl font-bold uppercase">
+            NAVAJA DORADA
+        </h1>
+<div class="scale-95 active:opacity-80 transition-transform">
+<img alt="Barber profile avatar" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-container ring-offset-2 ring-offset-surface" data-alt="Close up portrait of a well-groomed man with a beard and intense gaze, moody lighting, dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7Jib8WJJf28MiL9QZlHjmVQ71-EeLJUG5eNdo2uL7djrEoU3gbzFhVN_QYVqdEOFx8zUmVJAkKGbI-FDuHHxzLxcUZuIlrHWtw1QdHK9KFdZ1oTvdmljOtfOxzmam6jlxe0_li39fNXDzNclmrwMB4Oo0giavWQvlmaLZjaUpgpsFoBImIj3LJmVwlssXHuUQEu_qPm5gtN1B1Es2xGaCw5T5A_lpwMPGET4xjX_-0YQvv8JmrTT-ID0YXHOIsx5dfhR_z_GYUWoV"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-4 flex flex-col gap-6 max-w-2xl mx-auto w-full">
+<!-- Toggle Map / List -->
+<div class="flex justify-center mt-6">
+<div class="flex bg-surface-container-high rounded-full p-1 border border-outline-variant/15">
+<button class="px-6 py-2 rounded-full text-on-surface-variant text-sm font-medium transition-colors font-headline">
+                    Mapa
+                </button>
+<button class="px-6 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold transition-colors font-headline shadow-[0_0_20px_rgba(242,202,80,0.2)]">
+                    Lista
+                </button>
+</div>
+</div>
+<!-- Search Bar -->
+<div class="relative mt-2 group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant/50 group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest text-on-surface rounded-xl pl-12 pr-4 py-4 border-0 border-b-2 border-outline/30 focus:border-primary focus:ring-0 font-body placeholder:text-on-surface-variant/40 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]" placeholder="Buscar barbería..." type="text"/>
+</div>
+<!-- Section Title -->
+<div class="mt-4 flex items-baseline justify-between">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Ateliers Disponibles</h2>
+<span class="text-on-surface-variant text-sm font-body">Cerca de ti</span>
+</div>
+<!-- Barber List -->
+<div class="flex flex-col gap-4">
+<!-- Card 1 -->
+<button class="w-full flex items-center bg-surface-container-low rounded-2xl p-4 gap-4 text-left transition-all hover:bg-surface-container-high active:scale-[0.98] border border-outline-variant/10 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 relative">
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
+<img alt="El Dorado Classic" class="w-full h-full object-cover" data-alt="Interior of a luxury vintage barbershop with leather chairs, warm ambient lighting, rich dark woods" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNy_lzi9Q7Qvr1H79_n-wkr2s4QGH8bB8pMKKnXmLxpDjGR2NkonLIIH6VHdn2dzVxDlkRLN2no6Woc1jB-kL5Nu9h68TWwf0pWle_nZ6G0zfxVsDtWi8SjZl_xJp0ZBQ0eZhT1WhjVi_HIPYfneeNtux0BvQ6HuRpH8-RAKRCJlwa9w45WttD2U55lsCHPyNDjwtFUcxFsbgZ8VO4_PYyKQkN8-EWZ_9cU1y_0sMsIBB3YtIuOzDKOuO0dPNOfYe80mrp0GzNtKiR"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">El Dorado Classic</h3>
+<p class="font-body text-sm text-on-surface-variant/70 mt-0.5 truncate">Av. de la Libertad 124, Roma Nte.</p>
+<div class="flex items-center gap-3 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px] icon-fill" data-icon="star">star</span>
+<span class="font-body text-xs text-on-surface-variant font-medium">4.9 <span class="text-on-surface-variant/50">(128)</span></span>
+</div>
+<div class="w-1 h-1 rounded-full bg-outline-variant"></div>
+<div class="flex items-center gap-1 text-on-surface-variant/70">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span class="font-body text-xs">1.2 km</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 text-on-surface-variant/40 group-hover:text-primary transition-colors pr-2">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Card 2 -->
+<button class="w-full flex items-center bg-surface-container-low rounded-2xl p-4 gap-4 text-left transition-all hover:bg-surface-container-high active:scale-[0.98] border border-outline-variant/10 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 relative">
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
+<img alt="Obsidian Room" class="w-full h-full object-cover grayscale contrast-125" data-alt="Modern minimalist barbershop interior with black marble, sleek lighting, and dark aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOkx9i8dYIo0qGm3aOK6SZA0mp3wigcQblgS5kuIU8CJGQGAJWy9hafP1IzYTWxdgpGoykh2-KGKQPiIh1zibPdUc1sbZJ2fVvZb7HLRL5-eEpL8W2SdjqzDkAa1gCOi9WsWRN2V1S_WKmMOa0VO4RkFqB9R2r9CPNJ2dOWtmvnHcAp7YZXsENFrbed8Cs6GD1hk7PuwYAEhAv9DkEBMyNxfU-jUrPqxhK-YBXmkvZNTQ6-UHnc7IPLy1JoTA4vI5B5vGTva2PuACp"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">Obsidian Room</h3>
+<p class="font-body text-sm text-on-surface-variant/70 mt-0.5 truncate">Callejón del Sastre 45, Condesa</p>
+<div class="flex items-center gap-3 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px] icon-fill" data-icon="star">star</span>
+<span class="font-body text-xs text-on-surface-variant font-medium">4.8 <span class="text-on-surface-variant/50">(94)</span></span>
+</div>
+<div class="w-1 h-1 rounded-full bg-outline-variant"></div>
+<div class="flex items-center gap-1 text-on-surface-variant/70">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span class="font-body text-xs">2.4 km</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 text-on-surface-variant/40 group-hover:text-primary transition-colors pr-2">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Card 3 -->
+<button class="w-full flex items-center bg-surface-container-low rounded-2xl p-4 gap-4 text-left transition-all hover:bg-surface-container-high active:scale-[0.98] border border-outline-variant/10 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 relative">
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
+<img alt="Gentleman's Quarter" class="w-full h-full object-cover" data-alt="Barber tools resting on a dark wooden table, straight razor, scissors, dramatic shadow lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBx3Ak9fNvSdMlB7Oj73FqvPcK8P9pMqPrvw1WU9a8yDyQwP8onJsUIo_NBEd6A-puFqNX9riDfKwDOQr2rw9raGTmK-9h_cizzXw7jT1ECZSsP8mnDZsERSRpsoEI3dz7bNMiKH6uEDHOhwBhdNMLf7f-ndnVV_mZ_MQ-8xw4BvMrYid1tGTLkcWue5kU7KmVxm742aqcoKvEX7SsxzP7kIeRRV_bqNgPPyM98lMYcN6nqjLLzSUO7LGDyOzpfKHYbvEJg4LSeq5X1"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-headline font-bold text-lg text-on-surface truncate">Gentleman's Quarter</h3>
+<p class="font-body text-sm text-on-surface-variant/70 mt-0.5 truncate">Paseo de la Reforma 332, Juárez</p>
+<div class="flex items-center gap-3 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px] icon-fill" data-icon="star">star</span>
+<span class="font-body text-xs text-on-surface-variant font-medium">5.0 <span class="text-on-surface-variant/50">(215)</span></span>
+</div>
+<div class="w-1 h-1 rounded-full bg-outline-variant"></div>
+<div class="flex items-center gap-1 text-on-surface-variant/70">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span class="font-body text-xs">3.1 km</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 text-on-surface-variant/40 group-hover:text-primary transition-colors pr-2">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Spacer for bottom nav -->
+<div class="h-6"></div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl docked full-width bottom-0 rounded-t-2xl no-line background-color-shift shadow-[0_-4px_30px_rgba(0,0,0,0.5)] md:hidden">
+<!-- Active Tab: Atelier -->
+<button class="active:scale-90 transition-all duration-200 hover:text-white flex flex-col items-center justify-center text-[#D4AF37] bg-[#2A2A2A] rounded-xl px-4 py-2">
+<span class="material-symbols-outlined icon-fill mb-1" data-icon="content_cut">content_cut</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest">Atelier</span>
+</button>
+<!-- Inactive Tab: Services -->
+<button class="active:scale-90 transition-all duration-200 hover:text-white flex flex-col items-center justify-center text-neutral-500 px-4 py-2 group">
+<span class="material-symbols-outlined mb-1 group-hover:text-white transition-colors" data-icon="dry_cleaning">dry_cleaning</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest group-hover:text-white transition-colors">Services</span>
+</button>
+<!-- Inactive Tab: Bookings -->
+<button class="active:scale-90 transition-all duration-200 hover:text-white flex flex-col items-center justify-center text-neutral-500 px-4 py-2 group">
+<span class="material-symbols-outlined mb-1 group-hover:text-white transition-colors" data-icon="event_available">event_available</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest group-hover:text-white transition-colors">Bookings</span>
+</button>
+<!-- Inactive Tab: Profile -->
+<button class="active:scale-90 transition-all duration-200 hover:text-white flex flex-col items-center justify-center text-neutral-500 px-4 py-2 group">
+<span class="material-symbols-outlined mb-1 group-hover:text-white transition-colors" data-icon="person">person</span>
+<span class="font-manrope text-[10px] font-medium uppercase tracking-widest group-hover:text-white transition-colors">Profile</span>
+</button>
+</nav>
+<!-- SideNav for Web (Hidden on Mobile) -->
+<nav class="hidden md:flex fixed left-0 top-16 bottom-0 w-64 bg-surface-container-lowest border-r border-outline-variant/10 flex-col py-8 px-4 z-40">
+<div class="flex flex-col gap-2">
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl bg-surface-container-high text-primary font-headline transition-colors">
+<span class="material-symbols-outlined icon-fill" data-icon="content_cut">content_cut</span>
+<span class="text-sm font-semibold uppercase tracking-widest">Atelier</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container-low transition-colors font-headline">
+<span class="material-symbols-outlined" data-icon="dry_cleaning">dry_cleaning</span>
+<span class="text-sm font-medium uppercase tracking-widest">Services</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container-low transition-colors font-headline">
+<span class="material-symbols-outlined" data-icon="event_available">event_available</span>
+<span class="text-sm font-medium uppercase tracking-widest">Bookings</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container-low transition-colors font-headline">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-sm font-medium uppercase tracking-widest">Profile</span>
+</button>
+</div>
+</nav>
+<!-- CSS to adjust main content margin on desktop -->
+<style>
+        @media (min-width: 768px) {
+            main {
+                margin-left: 16rem;
+            }
+        }
+    </style>
+</body></html>

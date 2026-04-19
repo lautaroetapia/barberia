@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navaja Dorada - Elegí Servicio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#353535",
+                    "on-surface": "#e5e2e1",
+                    "surface-bright": "#393939",
+                    "on-background": "#e5e2e1",
+                    "surface-dim": "#131313",
+                    "surface-container": "#20201f",
+                    "inverse-on-surface": "#313030",
+                    "surface-variant": "#353535",
+                    "inverse-primary": "#735c00",
+                    "tertiary": "#bfcdff",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-primary-fixed-variant": "#574500",
+                    "on-secondary-fixed-variant": "#454747",
+                    "inverse-surface": "#e5e2e1",
+                    "tertiary-container": "#97b0ff",
+                    "on-tertiary-fixed-variant": "#27438a",
+                    "on-tertiary-fixed": "#00174b",
+                    "error-container": "#93000a",
+                    "tertiary-fixed": "#dbe1ff",
+                    "primary-container": "#d4af37",
+                    "on-primary-container": "#554300",
+                    "primary-fixed-dim": "#e9c349",
+                    "on-primary": "#3c2f00",
+                    "on-error-container": "#ffdad6",
+                    "secondary-fixed": "#e2e2e2",
+                    "primary": "#f2ca50",
+                    "on-secondary-container": "#b4b5b5",
+                    "surface": "#131313",
+                    "tertiary-fixed-dim": "#b4c5ff",
+                    "surface-container-high": "#2a2a2a",
+                    "surface-container-low": "#1c1b1b",
+                    "on-secondary": "#2f3131",
+                    "on-primary-fixed": "#241a00",
+                    "outline": "#99907c",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "surface-tint": "#e9c349",
+                    "error": "#ffb4ab",
+                    "on-surface-variant": "#d0c5af",
+                    "primary-fixed": "#ffe088",
+                    "on-tertiary-container": "#254188",
+                    "secondary": "#c6c6c7",
+                    "secondary-container": "#454747",
+                    "outline-variant": "#4d4635",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-error": "#690005",
+                    "on-tertiary": "#082b72",
+                    "background": "#131313"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Manrope", "sans-serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Inter", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col selection:bg-primary selection:text-on-primary">
+<!-- Header Contextual (Linear Flow) -->
+<header class="w-full flex items-center justify-between px-6 pt-12 pb-6 z-10 relative">
+<button aria-label="Volver" class="text-on-surface hover:text-primary transition-colors flex items-center justify-center w-10 h-10 -ml-2 rounded-full active:bg-surface-container-highest">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="font-headline text-lg font-bold tracking-tight absolute left-1/2 -translate-x-1/2">Elegí servicio</h1>
+<div class="w-10"></div> <!-- Spacer for perfect centering -->
+</header>
+<!-- Progress Bar -->
+<div class="px-6 mb-8">
+<div class="flex items-center justify-between gap-2">
+<!-- Step 1: Completado -->
+<div class="flex-1 h-1.5 rounded-full bg-surface-variant overflow-hidden relative">
+<div class="absolute inset-0 bg-primary/40"></div>
+</div>
+<!-- Step 2: Activo -->
+<div class="flex-1 h-1.5 rounded-full bg-surface-container-lowest overflow-hidden relative shadow-[0_0_10px_rgba(212,175,55,0.3)]">
+<div class="absolute inset-0 bg-gradient-to-r from-primary to-primary-container"></div>
+</div>
+<!-- Step 3, 4, 5: Pendiente -->
+<div class="flex-1 h-1.5 rounded-full bg-surface-container-lowest"></div>
+<div class="flex-1 h-1.5 rounded-full bg-surface-container-lowest"></div>
+<div class="flex-1 h-1.5 rounded-full bg-surface-container-lowest"></div>
+</div>
+<p class="font-headline text-xs font-bold uppercase tracking-[0.15em] text-primary mt-4 text-center">Paso 2 / 5</p>
+</div>
+<!-- Main Content: Service Scroller (Design System Signature) -->
+<main class="flex-1 px-6 pb-32 flex flex-col gap-6 overflow-y-auto">
+<!-- Service Tile: Active Selection -->
+<label class="relative block w-full h-48 rounded-xl overflow-hidden cursor-pointer group transition-transform active:scale-[0.98]">
+<input checked="" class="peer sr-only" name="service" type="radio" value="corte"/>
+<!-- Background Layer -->
+<div class="absolute inset-0 bg-surface-container-low transition-colors peer-checked:bg-surface-container-high"></div>
+<!-- Desaturated Image Overlay -->
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&amp;w=1000&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale opacity-20 mix-blend-luminosity" data-alt="close up of a barber cutting a man's hair with scissors in a dark moody premium barbershop with dramatic side lighting"></div>
+<!-- Tonal Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div>
+<!-- Active Indicator Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<!-- Content Container -->
+<div class="absolute inset-0 p-5 flex flex-col justify-end">
+<div class="flex items-end justify-between w-full">
+<div class="flex-1">
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-1.5 tracking-tight leading-none group-hover:text-primary transition-colors">Corte de Cabello</h2>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-body text-sm">
+<span class="material-symbols-outlined text-[16px] text-primary/70">schedule</span>
+<span>45 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<!-- Custom Radio Indicator -->
+<div class="w-6 h-6 rounded-full border-2 border-surface-variant flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary/10 transition-colors">
+<div class="w-2.5 h-2.5 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<span class="font-headline text-xl font-bold text-primary-container">$35</span>
+</div>
+</div>
+</div>
+</label>
+<!-- Service Tile: Inactive -->
+<label class="relative block w-full h-48 rounded-xl overflow-hidden cursor-pointer group transition-transform active:scale-[0.98]">
+<input class="peer sr-only" name="service" type="radio" value="barba"/>
+<!-- Background Layer -->
+<div class="absolute inset-0 bg-surface-container-low transition-colors peer-checked:bg-surface-container-high"></div>
+<!-- Desaturated Image Overlay -->
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&amp;w=1000&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale opacity-10 mix-blend-luminosity" data-alt="close up of a barber meticulously trimming a beard with a straight razor in a dark luxurious setting with warm gold accent lighting"></div>
+<!-- Tonal Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div>
+<!-- Active Indicator Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<!-- Content Container -->
+<div class="absolute inset-0 p-5 flex flex-col justify-end">
+<div class="flex items-end justify-between w-full">
+<div class="flex-1">
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-1.5 tracking-tight leading-none group-hover:text-primary transition-colors">Perfilado de Barba</h2>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-body text-sm">
+<span class="material-symbols-outlined text-[16px] text-primary/70">schedule</span>
+<span>30 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<div class="w-6 h-6 rounded-full border-2 border-surface-variant flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary/10 transition-colors">
+<div class="w-2.5 h-2.5 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<span class="font-headline text-xl font-bold text-primary-container">$20</span>
+</div>
+</div>
+</div>
+</label>
+<!-- Service Tile: Inactive -->
+<label class="relative block w-full h-48 rounded-xl overflow-hidden cursor-pointer group transition-transform active:scale-[0.98]">
+<input class="peer sr-only" name="service" type="radio" value="ritual"/>
+<!-- Background Layer -->
+<div class="absolute inset-0 bg-surface-container-low transition-colors peer-checked:bg-surface-container-high"></div>
+<!-- Desaturated Image Overlay -->
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1598908314766-3d2b274296ce?q=80&amp;w=1000&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale opacity-10 mix-blend-luminosity" data-alt="steaming hot towel resting on a premium leather barber chair in a moody cinematic dark environment"></div>
+<!-- Tonal Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div>
+<!-- Active Indicator Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<!-- Content Container -->
+<div class="absolute inset-0 p-5 flex flex-col justify-end">
+<div class="flex items-end justify-between w-full">
+<div class="flex-1">
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-1.5 tracking-tight leading-none group-hover:text-primary transition-colors">Ritual Toalla Caliente</h2>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-body text-sm">
+<span class="material-symbols-outlined text-[16px] text-primary/70">schedule</span>
+<span>60 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<div class="w-6 h-6 rounded-full border-2 border-surface-variant flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary/10 transition-colors">
+<div class="w-2.5 h-2.5 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<span class="font-headline text-xl font-bold text-primary-container">$45</span>
+</div>
+</div>
+</div>
+</label>
+</main>
+<!-- Floating Action Button (Bottom Fixed) -->
+<div class="fixed bottom-0 left-0 w-full p-6 pt-12 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none z-20">
+<button class="w-full h-16 rounded-xl pointer-events-auto relative overflow-hidden group shadow-[0_0_40px_rgba(242,202,80,0.15)] active:scale-[0.98] transition-transform duration-300">
+<!-- Glass/Gradient Background -->
+<div class="absolute inset-0 bg-gradient-to-br from-primary to-primary-container"></div>
+<!-- Shimmer Effect -->
+<div class="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-in-out"></div>
+<!-- Content -->
+<div class="relative z-10 w-full h-full flex items-center justify-center gap-2">
+<span class="font-headline font-bold text-lg text-on-primary tracking-wide">Siguiente</span>
+<span class="material-symbols-outlined text-on-primary icon-filled">arrow_forward</span>
+</div>
+</button>
+</div>
+</body></html>
