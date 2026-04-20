@@ -1,7 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import type { User } from "@supabase/supabase-js";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Alert,
     Pressable,
@@ -15,6 +16,14 @@ import { BarberRoleNav } from "@/components/barber-role-nav";
 import { AppToast } from "@/components/ui/app-toast";
 import { clearStoredActiveRole, setStoredActiveRole } from "@/lib/active-role";
 import { supabase } from "@/lib/supabase";
+import {
+    getGoogleAvatarFromProviderToken,
+    getUserAvatarUri,
+    isGoogleUser,
+} from "@/lib/user-avatar";
+
+const AVATAR_URI =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCWYKuVp3vuT0rwxEuDBrkSNn8KvTqwU7RbMRlW5bv8vfz1USDoA4wbVR1NbqbJDnbNGaA-Mq1ct27V_ygg4dLGQ1sV3GkZvA0yIpjjqHRc8zxP7ogqjEXAeZH0HpPp92ZgKk4dRaPA3X2AEImQTqlBvhq3LRmoeJI04zTdnUec9iF3AyN3m1yTj7SLagDU8LWxnMxUEPmxHjHbI568eAT2BrtBqmQB-WB2D-jaXQ_YuBOJfvNbUqes8eqS_ZqVXaNRptt0CATEULZj";
 
 const options = [
   ["store", "Datos de barberia"],
@@ -28,11 +37,71 @@ const options = [
 ] as const;
 
 export default function OwnerMoreSettingsScreen() {
+  const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
   const [toast, setToast] = useState<{
     visible: boolean;
     message: string;
     type: "success" | "info" | "error";
   }>({ visible: false, message: "", type: "info" });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyUserData = async (user: User | null) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user ?? null;
+      const userForAvatar = sessionUser ?? user;
+
+      const resolvedAvatar = getUserAvatarUri(userForAvatar, AVATAR_URI);
+      setAvatarUri(resolvedAvatar);
+
+      if (!isGoogleUser(userForAvatar)) {
+        return;
+      }
+
+      const googleAvatar = await getGoogleAvatarFromProviderToken(
+        sessionData.session?.provider_token,
+      );
+
+      if (!isMounted || !googleAvatar) {
+        return;
+      }
+
+      setAvatarUri(googleAvatar);
+    };
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!isMounted) {
+          return;
+        }
+
+        void applyUserData(data.user ?? null);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        void applyUserData(null);
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      void applyUserData(session?.user ?? null);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const performSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -117,9 +186,7 @@ export default function OwnerMoreSettingsScreen() {
         <Text style={styles.brand}>NAVAJA DORADA</Text>
         <View style={styles.avatarWrap}>
           <Image
-            source={{
-              uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWYKuVp3vuT0rwxEuDBrkSNn8KvTqwU7RbMRlW5bv8vfz1USDoA4wbVR1NbqbJDnbNGaA-Mq1ct27V_ygg4dLGQ1sV3GkZvA0yIpjjqHRc8zxP7ogqjEXAeZH0HpPp92ZgKk4dRaPA3X2AEImQTqlBvhq3LRmoeJI04zTdnUec9iF3AyN3m1yTj7SLagDU8LWxnMxUEPmxHjHbI568eAT2BrtBqmQB-WB2D-jaXQ_YuBOJfvNbUqes8eqS_ZqVXaNRptt0CATEULZj",
-            }}
+            source={{ uri: avatarUri }}
             style={styles.avatar}
             contentFit="cover"
           />

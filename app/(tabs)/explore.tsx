@@ -1,7 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import type { User } from "@supabase/supabase-js";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ImageBackground,
     Pressable,
@@ -11,6 +12,12 @@ import {
 } from "react-native";
 
 import { getFavoriteShops, toggleFavoriteShop } from "@/lib/favorites";
+import { supabase } from "@/lib/supabase";
+import {
+    getGoogleAvatarFromProviderToken,
+    getUserAvatarUri,
+    isGoogleUser,
+} from "@/lib/user-avatar";
 
 const MAP_BG_URI =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBXgwhuCuUG5-2SjKMlHcDbtz8HpqLDGz7AXPJfY1eNcOX8djunn_5afjCU3ye98w1MVguEdqWUzZMF-Ik0MjfWasPOnpbsp-MMUCLAHva1OLbcT4aTQpJP6w0DUv-A1-Co6M2rO5OthVRVrflD3fI-HHduMhXk1yk4aXKvqzGMQl6SgKf0JjIuJZpsavtG8pi978FJCIQ15vDAA91mNIwhqEwNG0qtYS7f43sogd50Vm-og7ovX7JGAH4gzoxi-uoqh-8vWjcysyPc";
@@ -52,6 +59,7 @@ export default function MapViewScreen() {
   const [showSelectedCard, setShowSelectedCard] = useState(true);
   const [selectedShopId, setSelectedShopId] = useState(mapAteliers[0].id);
   const [favoriteShopIds, setFavoriteShopIds] = useState<string[]>([]);
+  const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
 
   useFocusEffect(() => {
     let isMounted = true;
@@ -73,6 +81,65 @@ export default function MapViewScreen() {
     };
   });
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyUserData = async (user: User | null) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user ?? null;
+      const userForAvatar = sessionUser ?? user;
+
+      const resolvedAvatar = getUserAvatarUri(userForAvatar, AVATAR_URI);
+      setAvatarUri(resolvedAvatar);
+
+      if (!isGoogleUser(userForAvatar)) {
+        return;
+      }
+
+      const googleAvatar = await getGoogleAvatarFromProviderToken(
+        sessionData.session?.provider_token,
+      );
+
+      if (!isMounted || !googleAvatar) {
+        return;
+      }
+
+      setAvatarUri(googleAvatar);
+    };
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!isMounted) {
+          return;
+        }
+
+        void applyUserData(data.user ?? null);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        void applyUserData(null);
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      void applyUserData(session?.user ?? null);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const selectedAtelier =
     mapAteliers.find((atelier) => atelier.id === selectedShopId) ??
     mapAteliers[0];
@@ -90,7 +157,7 @@ export default function MapViewScreen() {
         <Text style={styles.brand}>NAVAJA DORADA</Text>
         <View style={styles.avatarWrap}>
           <Image
-            source={{ uri: AVATAR_URI }}
+            source={{ uri: avatarUri }}
             style={styles.avatar}
             contentFit="cover"
           />
