@@ -1,10 +1,17 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Print from "expo-print";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { 
+  Pressable, 
+  ScrollView, 
+  StyleSheet, 
+  Text, 
+  View, 
+  ActivityIndicator 
+} from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
 import { AppToast } from "@/components/ui/app-toast";
@@ -12,73 +19,40 @@ import { getOwnerAppointmentsMap } from "@/lib/owner-agenda";
 import { getOwnerBarbers } from "@/lib/owner-barbers";
 import { getOwnerServices } from "@/lib/owner-services";
 
-type DailyStats = {
-  date: string;
-  appointments: number;
-  revenue: number;
-};
-
+// Tipos y funciones auxiliares (se mantienen de tu lógica original)
+type DailyStats = { date: string; appointments: number; revenue: number; };
 type ReportRange = "today" | "week" | "month";
 
 const toDisplayDate = (key: string) => {
   const [year, month, day] = key.split("-");
-  if (!year || !month || !day) {
-    return key;
-  }
-
-  return `${day}/${month}/${year}`;
+  return year ? `${day}/${month}/${year}` : key;
 };
 
 const parseDateKey = (key: string) => {
-  const [yearStr, monthStr, dayStr] = key.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-
+  const [year, month, day] = key.split("-").map(Number);
   if (!year || !month || !day) {
     return null;
   }
-
-  return new Date(year, month - 1, day);
+  const parsed = new Date(year, month - 1, day);
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
 };
 
 const isDateInsideRange = (date: Date, range: ReportRange) => {
   const today = new Date();
-  const dayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
+  today.setHours(0, 0, 0, 0);
 
   if (range === "today") {
-    return (
-      date.getFullYear() === dayStart.getFullYear() &&
-      date.getMonth() === dayStart.getMonth() &&
-      date.getDate() === dayStart.getDate()
-    );
+    return date.getTime() === today.getTime();
   }
 
   if (range === "week") {
-    const weekStart = new Date(dayStart);
-    weekStart.setDate(weekStart.getDate() - 6);
-    return date >= weekStart && date <= dayStart;
+    const start = new Date(today);
+    start.setDate(today.getDate() - 6);
+    return date >= start && date <= today;
   }
 
-  const monthStart = new Date(dayStart);
-  monthStart.setDate(1);
-  return date >= monthStart && date <= dayStart;
-};
-
-const getRangeLabel = (range: ReportRange) => {
-  if (range === "today") {
-    return "Hoy";
-  }
-
-  if (range === "week") {
-    return "Semana";
-  }
-
-  return "Mes";
+  return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
 };
 
 export default function OwnerReportsScreen() {
@@ -91,204 +65,119 @@ export default function OwnerReportsScreen() {
   const [activeServices, setActiveServices] = useState(0);
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({ visible: false, message: "", type: "info" });
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ visible: false, message: "", type: "info" as "success" | "info" | "error" });
+
+  const formattedRevenue = useMemo(() => `$${estimatedRevenue.toLocaleString("es-AR")}`, [estimatedRevenue]);
 
   const loadReportData = useCallback(async () => {
-    const [appointmentsMap, services, barbers] = await Promise.all([
-      getOwnerAppointmentsMap(),
-      getOwnerServices(),
-      getOwnerBarbers(),
-    ]);
+    setLoading(true);
+    try {
+      const [appointmentsMap, barbers, services] = await Promise.all([
+        getOwnerAppointmentsMap(),
+        getOwnerBarbers(),
+        getOwnerServices(),
+      ]);
 
-    const servicePriceMap = new Map(
-      services.map((item) => [
-        item.serviceName.toLowerCase(),
-        Number(item.price),
-      ]),
-    );
+      const servicePriceMap = new Map(
+        services.map((item) => [item.serviceName.toLowerCase(), Number(item.price) || 0]),
+      );
 
-    let total = 0;
-    let inProgress = 0;
-    let noShow = 0;
-    let revenue = 0;
+      let total = 0;
+      let inProgress = 0;
+      let noShow = 0;
+      let revenue = 0;
+      const days: DailyStats[] = [];
 
-    const filteredDateEntries = Object.entries(appointmentsMap)
-      .map(([dateKey, appointments]) => ({
-        dateKey,
-        date: parseDateKey(dateKey),
-        appointments,
-      }))
-      .filter(
-        (entry) => entry.date && isDateInsideRange(entry.date, reportRange),
-      )
-      .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+      Object.entries(appointmentsMap).forEach(([dateKey, appointments]) => {
+        const parsed = parseDateKey(dateKey);
+        if (!parsed || !isDateInsideRange(parsed, reportRange)) {
+          return;
+        }
 
-    const nextDailyStats: DailyStats[] = filteredDateEntries
-      .slice(0, 31)
-      .map(({ dateKey, appointments }) => {
-        const scheduled = appointments.filter(
-          (item) => item.status !== "libre",
-        );
+        const validAppointments = appointments.filter((item) => item.status !== "libre");
+        const revenueAppointments = validAppointments.filter((item) => item.status !== "no_asistio");
 
-        const dayRevenue = scheduled.reduce((acc, item) => {
-          if (item.status === "no_asistio") {
-            return acc;
-          }
-
-          const itemPrice =
-            servicePriceMap.get(item.service.toLowerCase()) ??
-            Number(services[0]?.price ?? 0);
-          return acc + itemPrice;
+        const dayRevenue = revenueAppointments.reduce((acc, item) => {
+          const price = servicePriceMap.get(item.service.toLowerCase()) ?? 0;
+          return acc + price;
         }, 0);
 
-        return {
+        total += validAppointments.length;
+        inProgress += validAppointments.filter((item) => item.status === "en_progreso").length;
+        noShow += validAppointments.filter((item) => item.status === "no_asistio").length;
+        revenue += dayRevenue;
+
+        days.push({
           date: dateKey,
-          appointments: scheduled.length,
+          appointments: validAppointments.length,
           revenue: dayRevenue,
-        };
+        });
       });
 
-    filteredDateEntries.forEach(({ appointments }) => {
-      appointments.forEach((item) => {
-        if (item.status === "libre") {
-          return;
-        }
+      days.sort((a, b) => b.date.localeCompare(a.date));
 
-        total += 1;
-
-        if (item.status === "en_progreso") {
-          inProgress += 1;
-        }
-
-        if (item.status === "no_asistio") {
-          noShow += 1;
-          return;
-        }
-
-        const itemPrice =
-          servicePriceMap.get(item.service.toLowerCase()) ??
-          Number(services[0]?.price ?? 0);
-        revenue += itemPrice;
-      });
-    });
-
-    setTotalAppointments(total);
-    setInProgressAppointments(inProgress);
-    setNoShowAppointments(noShow);
-    setEstimatedRevenue(revenue);
-    setActiveBarbers(barbers.filter((item) => item.active).length);
-    setActiveServices(services.filter((item) => item.active).length);
-    setDailyStats(nextDailyStats);
+      setTotalAppointments(total);
+      setInProgressAppointments(inProgress);
+      setNoShowAppointments(noShow);
+      setEstimatedRevenue(revenue);
+      setActiveBarbers(barbers.filter((item) => item.active).length);
+      setActiveServices(services.filter((item) => item.active).length);
+      setDailyStats(days);
+    } catch {
+      setToast({ visible: true, message: "No se pudo cargar el reporte", type: "error" });
+    } finally {
+      setLoading(false);
+    }
   }, [reportRange]);
 
-  const handleExportPdf = async () => {
+  const exportReport = async () => {
     if (isExporting) {
       return;
     }
 
     setIsExporting(true);
-
     try {
-      const rowsHtml = dailyStats.length
-        ? dailyStats
-            .map(
-              (item) => `
-                <tr>
-                  <td>${toDisplayDate(item.date)}</td>
-                  <td>${item.appointments}</td>
-                  <td>$${item.revenue.toLocaleString("es-AR")}</td>
-                </tr>
-              `,
-            )
-            .join("")
-        : '<tr><td colspan="3">Sin datos para el periodo</td></tr>';
-
       const html = `
         <html>
-          <head>
-            <meta charset="utf-8" />
-            <style>
-              body { font-family: Arial, sans-serif; padding: 24px; color: #1a1a1a; }
-              h1 { margin: 0 0 6px 0; }
-              p { margin: 4px 0; }
-              .kpis { margin: 16px 0; }
-              .kpi { margin: 2px 0; }
-              table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background: #f4f4f4; }
-            </style>
-          </head>
-          <body>
-            <h1>Reporte de Barberia</h1>
-            <p>Periodo: ${getRangeLabel(reportRange)}</p>
-            <p>Generado: ${new Date().toLocaleString("es-AR")}</p>
-
-            <div class="kpis">
-              <p class="kpi">Ingresos estimados: ${formattedRevenue}</p>
-              <p class="kpi">Turnos: ${totalAppointments}</p>
-              <p class="kpi">En progreso: ${inProgressAppointments}</p>
-              <p class="kpi">No asistio: ${noShowAppointments}</p>
-              <p class="kpi">Barberos activos: ${activeBarbers}</p>
-              <p class="kpi">Servicios activos: ${activeServices}</p>
-            </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Turnos</th>
-                  <th>Ingresos</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
+          <body style="font-family: Arial, sans-serif; padding: 20px; color: #111;">
+            <h1>Navaja Dorada - Reporte</h1>
+            <p><strong>Rango:</strong> ${reportRange}</p>
+            <p><strong>Turnos totales:</strong> ${totalAppointments}</p>
+            <p><strong>Turnos en progreso:</strong> ${inProgressAppointments}</p>
+            <p><strong>No asistió:</strong> ${noShowAppointments}</p>
+            <p><strong>Ingresos estimados:</strong> ${formattedRevenue}</p>
+            <p><strong>Barberos activos:</strong> ${activeBarbers}</p>
+            <p><strong>Servicios activos:</strong> ${activeServices}</p>
+            <hr />
+            <h3>Desglose diario</h3>
+            <ul>
+              ${dailyStats
+                .map(
+                  (item) =>
+                    `<li>${toDisplayDate(item.date)} · ${item.appointments} turnos · $${item.revenue.toLocaleString("es-AR")}</li>`,
+                )
+                .join("")}
+            </ul>
           </body>
         </html>
       `;
 
       const file = await Print.printToFileAsync({ html });
-      const canShare = await Sharing.isAvailableAsync();
-
-      if (!canShare) {
-        setToast({
-          visible: true,
-          type: "info",
-          message: `PDF generado en: ${file.uri}`,
-        });
-        return;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri);
+        setToast({ visible: true, message: "Reporte exportado", type: "success" });
+      } else {
+        setToast({ visible: true, message: "Archivo generado, comparte manualmente", type: "info" });
       }
-
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Compartir reporte",
-      });
     } catch {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "No se pudo exportar el reporte.",
-      });
+      setToast({ visible: true, message: "No se pudo exportar el reporte", type: "error" });
     } finally {
       setIsExporting(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadReportData();
-    }, [loadReportData]),
-  );
-
-  const formattedRevenue = useMemo(
-    () => `$${estimatedRevenue.toLocaleString("es-AR")}`,
-    [estimatedRevenue],
-  );
+  useFocusEffect(useCallback(() => { loadReportData(); }, [loadReportData]));
 
   return (
     <View style={styles.screen}>
@@ -296,111 +185,101 @@ export default function OwnerReportsScreen() {
         visible={toast.visible}
         message={toast.message}
         type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
 
-      <View style={styles.topBar}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.replace("/barber/owner-more-settings")}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
+      {/* Top Bar Moderna */}
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Feather name="arrow-left" size={24} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>Reportes</Text>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => void handleExportPdf()}
+        <Text style={styles.headerTitle}>Análisis de Negocio</Text>
+        <Pressable 
+          style={[styles.exportButton, isExporting && { opacity: 0.5 }]} 
+          onPress={() => void exportReport()}
         >
-          <MaterialIcons
-            name={isExporting ? "sync" : "picture-as-pdf"}
-            size={20}
-            color="#d4af37"
-          />
+          {isExporting ? <ActivityIndicator size="small" color="#000" /> : <Feather name="share" size={18} color="#000" />}
         </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.rangeRow}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {loading ? <Text style={styles.loadingText}>Cargando métricas...</Text> : null}
+        
+        {/* Selector de Rango */}
+        <View style={styles.tabContainer}>
           {(["today", "week", "month"] as const).map((range) => (
             <Pressable
               key={range}
-              style={[
-                styles.rangeChip,
-                reportRange === range && styles.rangeChipActive,
-              ]}
               onPress={() => setReportRange(range)}
+              style={[styles.tab, reportRange === range && styles.activeTab]}
             >
-              <Text
-                style={[
-                  styles.rangeChipText,
-                  reportRange === range && styles.rangeChipTextActive,
-                ]}
-              >
-                {getRangeLabel(range)}
+              <Text style={[styles.tabText, reportRange === range && styles.activeTabText]}>
+                {range === "today" ? "Hoy" : range === "week" ? "Semana" : "Mes"}
               </Text>
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Ingresos estimados</Text>
-          <Text style={styles.summaryValue}>{formattedRevenue}</Text>
-          <Text style={styles.summaryHint}>
-            Basado en turnos cargados y servicios activos
-          </Text>
-        </View>
-
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Turnos</Text>
-            <Text style={styles.kpiValue}>{totalAppointments}</Text>
+        {/* Hero Card: Ingresos */}
+        <View style={styles.revenueHero}>
+          <View>
+            <Text style={styles.heroLabel}>INGRESOS ESTIMADOS</Text>
+            <Text style={styles.heroValue}>{formattedRevenue}</Text>
           </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>En progreso</Text>
-            <Text style={styles.kpiValue}>{inProgressAppointments}</Text>
+          <View style={styles.heroIconContainer}>
+            <Feather name="trending-up" size={32} color="#f2ca50" />
           </View>
         </View>
 
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>No asistio</Text>
-            <Text style={styles.kpiValue}>{noShowAppointments}</Text>
+        {/* Grid de KPIs */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Turnos Totales</Text>
+            <Text style={styles.statValue}>{totalAppointments}</Text>
+            <Feather name="calendar" size={16} color="#d4af37" style={styles.statIcon} />
           </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Barberos activos</Text>
-            <Text style={styles.kpiValue}>{activeBarbers}</Text>
-          </View>
-        </View>
-
-        <View style={styles.kpiRowSingle}>
-          <View style={styles.kpiCardSingle}>
-            <Text style={styles.kpiLabel}>Servicios activos</Text>
-            <Text style={styles.kpiValue}>{activeServices}</Text>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>No Asistió</Text>
+            <Text style={[styles.statValue, { color: "#ffb4ab" }]}>{noShowAppointments}</Text>
+            <Feather name="user-x" size={16} color="#ffb4ab" style={styles.statIcon} />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Detalle del periodo</Text>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Barberos</Text>
+            <Text style={styles.statValue}>{activeBarbers}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Servicios</Text>
+            <Text style={styles.statValue}>{activeServices}</Text>
+          </View>
+        </View>
 
-        {dailyStats.length ? (
-          dailyStats.map((item) => (
-            <View key={item.date} style={styles.dayCard}>
-              <View>
-                <Text style={styles.dayDate}>{toDisplayDate(item.date)}</Text>
-                <Text style={styles.dayMeta}>{item.appointments} turnos</Text>
+        {/* Detalle Diario */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Desglose Diario</Text>
+          <Feather name="list" size={18} color="#99907c" />
+        </View>
+
+        {dailyStats.length > 0 ? (
+          dailyStats.map((item, idx) => (
+            <View key={idx} style={styles.dayRow}>
+              <View style={styles.dayDateBox}>
+                <Text style={styles.dayDateText}>{item.date.split("-")[2]}</Text>
+                <Text style={styles.dayMonthText}>{item.date.split("-")[1] === '04' ? 'ABR' : 'MES'}</Text>
               </View>
-              <Text style={styles.dayRevenue}>
-                ${item.revenue.toLocaleString("es-AR")}
-              </Text>
+              <View style={styles.dayInfo}>
+                <Text style={styles.dayTitle}>{toDisplayDate(item.date)}</Text>
+                <Text style={styles.daySub}>{item.appointments} servicios completados</Text>
+              </View>
+              <Text style={styles.dayPrice}>${item.revenue.toLocaleString("es-AR")}</Text>
             </View>
           ))
         ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
-              Aun no hay datos para reportar.
-            </Text>
+          <View style={styles.emptyContainer}>
+            <Feather name="inbox" size={40} color="#333" />
+            <Text style={styles.emptyText}>No hay datos en este periodo</Text>
           </View>
         )}
       </ScrollView>
@@ -411,133 +290,114 @@ export default function OwnerReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
-  topBar: {
-    height: 70,
+  screen: { flex: 1, backgroundColor: "#080808" },
+  header: {
+    height: 110,
+    paddingTop: 50,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
+    backgroundColor: "#080808",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "800", letterSpacing: 0.5 },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#151515",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  exportButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
   },
-  brand: {
-    color: "#d4af37",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 110,
-    gap: 12,
-  },
-  rangeRow: {
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 120 },
+  
+  // Tabs
+  tabContainer: {
     flexDirection: "row",
-    gap: 8,
-  },
-  rangeChip: {
-    minHeight: 34,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+    backgroundColor: "#151515",
+    padding: 6,
+    borderRadius: 16,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.3)",
-    backgroundColor: "#1c1b1b",
+    borderColor: "#222",
+  },
+  tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 12 },
+  activeTab: { backgroundColor: "#d4af37" },
+  tabText: { color: "#888", fontWeight: "700", fontSize: 13 },
+  activeTabText: { color: "#000" },
+
+  // Hero Card
+  revenueHero: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 24,
+    padding: 24,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-  },
-  rangeChipActive: {
-    borderColor: "rgba(212,175,55,0.45)",
-    backgroundColor: "rgba(212,175,55,0.15)",
-  },
-  rangeChipText: {
-    color: "#d0c5af",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  rangeChipTextActive: {
-    color: "#f2ca50",
-  },
-  summaryCard: {
-    borderRadius: 14,
-    backgroundColor: "#2a2a2a",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 16,
+    borderColor: "#d4af3733",
+    marginBottom: 16,
   },
-  summaryLabel: {
-    color: "#d0c5af",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  summaryValue: {
-    color: "#e5e2e1",
-    fontSize: 34,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  summaryHint: {
-    color: "#99907c",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  kpiRow: { flexDirection: "row", gap: 10 },
-  kpiRowSingle: { flexDirection: "row" },
-  kpiCard: {
+  heroLabel: { color: "#d4af37", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  heroValue: { color: "#fff", fontSize: 36, fontWeight: "900", marginTop: 4 },
+  heroIconContainer: { width: 56, height: 56, borderRadius: 18, backgroundColor: "#d4af3715", alignItems: "center", justifyContent: "center" },
+
+  // Stats Grid
+  statsGrid: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  statCard: {
     flex: 1,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
+    backgroundColor: "#121212",
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
+    borderColor: "#1a1a1a",
   },
-  kpiCardSingle: {
-    width: "100%",
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
-  },
-  kpiLabel: {
-    color: "#99907c",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  kpiValue: { color: "#e5e2e1", fontSize: 28, fontWeight: "800", marginTop: 6 },
-  sectionTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  dayCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
+  statLabel: { color: "#666", fontSize: 12, fontWeight: "600", marginBottom: 8 },
+  statValue: { color: "#eee", fontSize: 22, fontWeight: "800" },
+  statIcon: { position: "absolute", top: 16, right: 16, opacity: 0.5 },
+
+  // List Detail
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 20, marginBottom: 15, paddingHorizontal: 4 },
+  sectionTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  dayRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  dayDate: { color: "#e5e2e1", fontSize: 15, fontWeight: "700" },
-  dayMeta: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  dayRevenue: { color: "#f2ca50", fontSize: 16, fontWeight: "800" },
-  emptyCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
+    backgroundColor: "#121212",
+    padding: 12,
+    borderRadius: 18,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
+    borderColor: "#1a1a1a",
   },
-  emptyText: { color: "#d0c5af", fontSize: 13 },
+  dayDateBox: {
+    width: 45,
+    height: 45,
+    borderRadius: 12,
+    backgroundColor: "#1a1a1a",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  dayDateText: { color: "#d4af37", fontSize: 16, fontWeight: "800" },
+  dayMonthText: { color: "#666", fontSize: 8, fontWeight: "800" },
+  dayInfo: { flex: 1 },
+  dayTitle: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  daySub: { color: "#666", fontSize: 11, marginTop: 2 },
+  dayPrice: { color: "#f2ca50", fontSize: 15, fontWeight: "800" },
+
+  emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
+  emptyText: { color: "#333", fontSize: 14, fontWeight: "600", marginTop: 10 },
+  loadingText: { color: "#99907c", fontSize: 12, textAlign: "center", marginBottom: 10 },
 });

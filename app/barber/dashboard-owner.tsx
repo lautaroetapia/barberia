@@ -4,20 +4,22 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  StatusBar,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
 import { getOwnedBarbershopProfile } from "@/lib/owned-barbershop";
 import {
-    getOwnerAppointmentsByDate,
-    saveOwnerAppointmentsByDate,
-    type OwnerAppointment,
+  getOwnerAppointmentsByDate,
+  saveOwnerAppointmentsByDate,
+  type OwnerAppointment,
 } from "@/lib/owner-agenda";
 import { getOwnerServices } from "@/lib/owner-services";
 
@@ -27,31 +29,21 @@ export default function DashboardOwnerScreen() {
   const [scheduledCount, setScheduledCount] = useState(0);
   const [occupancyPercent, setOccupancyPercent] = useState(0);
   const [estimatedSales, setEstimatedSales] = useState(0);
-  const [upcomingAppointments, setUpcomingAppointments] = useState<
-    OwnerAppointment[]
-  >([]);
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<OwnerAppointment | null>(null);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<OwnerAppointment[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<OwnerAppointment | null>(null);
   const [isUpdatingAppointment, setIsUpdatingAppointment] = useState(false);
 
+  // ... (Lógica de carga de datos idéntica a la original para mantener funcionalidad)
   useEffect(() => {
     let isMounted = true;
-
     const loadOwnedBarbershop = async () => {
       const profile = await getOwnedBarbershopProfile();
-      if (!isMounted || !profile?.name.trim()) {
-        return;
-      }
-
+      if (!isMounted || !profile?.name.trim()) return;
       setBarbershopName(profile.name.trim());
       setBarbershopImageUri(profile.imageUri ?? "");
     };
-
     void loadOwnedBarbershop();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const loadDashboardData = useCallback(async () => {
@@ -59,227 +51,186 @@ export default function DashboardOwnerScreen() {
       getOwnerAppointmentsByDate(new Date()),
       getOwnerServices(),
     ]);
-
     const scheduled = appointments.filter((item) => item.status !== "libre");
     const totalSlots = Math.max(appointments.length, 1);
-
-    const servicesPriceMap = new Map(
-      services.map((item) => [
-        item.serviceName.toLowerCase(),
-        Number(item.price),
-      ]),
-    );
-
+    const servicesPriceMap = new Map(services.map((item) => [item.serviceName.toLowerCase(), Number(item.price)]));
     const sales = scheduled.reduce((acc, item) => {
-      const guessedPrice =
-        servicesPriceMap.get(item.service.toLowerCase()) ??
-        Number(services[0]?.price ?? 0) ??
-        0;
+      const guessedPrice = servicesPriceMap.get(item.service.toLowerCase()) ?? Number(services[0]?.price ?? 0) ?? 0;
       return acc + guessedPrice;
     }, 0);
-
     setScheduledCount(scheduled.length);
     setOccupancyPercent(Math.round((scheduled.length / totalSlots) * 100));
     setEstimatedSales(sales);
     setUpcomingAppointments(scheduled.slice(0, 3));
   }, []);
 
-  const updateSelectedAppointmentStatus = async (
-    nextStatus: OwnerAppointment["status"],
-  ) => {
-    if (!selectedAppointment || isUpdatingAppointment) {
-      return;
-    }
-
+  const updateSelectedAppointmentStatus = async (nextStatus: OwnerAppointment["status"]) => {
+    if (!selectedAppointment || isUpdatingAppointment) return;
     setIsUpdatingAppointment(true);
-
     try {
       const todaysAppointments = await getOwnerAppointmentsByDate(new Date());
       const nextAppointments = todaysAppointments.map((item) =>
-        item.id === selectedAppointment.id
-          ? { ...item, status: nextStatus }
-          : item,
+        item.id === selectedAppointment.id ? { ...item, status: nextStatus } : item
       );
-
       await saveOwnerAppointmentsByDate(new Date(), nextAppointments);
       setSelectedAppointment(null);
       await loadDashboardData();
-    } finally {
-      setIsUpdatingAppointment(false);
-    }
+    } finally { setIsUpdatingAppointment(false); }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadDashboardData();
-    }, [loadDashboardData]),
-  );
+  useFocusEffect(useCallback(() => { void loadDashboardData(); }, [loadDashboardData]));
 
-  const formattedSales = useMemo(
-    () => `$${estimatedSales.toLocaleString("es-AR")}`,
-    [estimatedSales],
-  );
+  const formattedSales = useMemo(() => `$${estimatedSales.toLocaleString("es-AR")}`, [estimatedSales]);
 
   return (
     <View style={styles.screen}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* TOP BAR */}
       <View style={styles.topBar}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.replace("/barber/owner-more-settings")}
-        >
-          <MaterialIcons name="menu" size={22} color="#d4af37" />
+        <Pressable style={styles.iconButton} onPress={() => router.replace("/barber/owner-more-settings")}>
+          <MaterialIcons name="segment" size={26} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>NAVAJA DORADA</Text>
-        <View style={styles.avatarWrap}>
-          <Image
-            source={{
-              uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuA-gShRIXoAB9uLCNYdDnp5OwO3Buw86RltNYz7jQR7jRoYclyu8mxhPPR_Yq4BG0szG4I-CTRNiTPYxdDsMYztxw4E8s_6ZcD7yjCEWVJHNc-DV5_gqo4JXxOhXVDsHV8wf5m1tmQiLbLdoTfeF_T3B4XAty3Kome2hXGXbmh1uDRuYXU-5I7ZIQGPXKFiLT6MAI-PkHyvocQmmh2bOzPWzp7jlLgmLjDvBPaluMennCUFRiclN6oyA9MMvvlpDu4uteupVxmL5Lmv",
-            }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
+        <View style={styles.brandContainer}>
+          <Text style={styles.brandText}>NAVAJA DORADA</Text>
+          <View style={styles.brandDot} />
         </View>
+        <Pressable style={styles.avatarWrap} onPress={() => router.push("/(tabs)/profile")}>
+          <Image
+            source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuA-gShRIXoAB9uLCNYdDnp5OwO3Buw86RltNYz7jQR7jRoYclyu8mxhPPR_Yq4BG0szG4I-CTRNiTPYxdDsMYztxw4E8s_6ZcD7yjCEWVJHNc-DV5_gqo4JXxOhXVDsHV8wf5m1tmQiLbLdoTfeF_T3B4XAty3Kome2hXGXbmh1uDRuYXU-5I7ZIQGPXKFiLT6MAI-PkHyvocQmmh2bOzPWzp7jlLgmLjDvBPaluMennCUFRiclN6oyA9MMvvlpDu4uteupVxmL5Lmv" }}
+            style={styles.avatar}
+          />
+        </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Dueno · {barbershopName}</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.welcomeHeader}>
+          <Text style={styles.title}>Panel General</Text>
+          <View style={styles.statusBadge}>
+            <View style={styles.pulseDot} />
+            <Text style={styles.statusText}>EN VIVO</Text>
+          </View>
+        </View>
 
-        <Pressable
-          style={styles.barbershopCard}
-          onPress={() => router.push("/barber/owner-barbershop-profile")}
-        >
-          <View style={styles.barbershopImageWrap}>
+        {/* BARBERSHOP CARD */}
+        <Pressable style={styles.shopCard} onPress={() => router.push("/barber/owner-barbershop-profile")}>
+          <View style={styles.shopImageContainer}>
             {barbershopImageUri ? (
-              <Image
-                source={{ uri: barbershopImageUri }}
-                style={styles.barbershopImage}
-                contentFit="cover"
-              />
+              <Image source={{ uri: barbershopImageUri }} style={styles.shopImage} contentFit="cover" />
             ) : (
-              <View style={styles.barbershopImageFallback}>
-                <MaterialIcons name="storefront" size={20} color="#d0c5af" />
-              </View>
+              <MaterialIcons name="storefront" size={22} color="#d4af37" />
             )}
           </View>
-          <View style={styles.barbershopCardBody}>
-            <Text style={styles.barbershopCardTitle}>{barbershopName}</Text>
-            <Text style={styles.barbershopCardSubtitle}>
-              Barberia principal
-            </Text>
+          <View style={styles.shopInfo}>
+            <Text style={styles.shopName}>{barbershopName}</Text>
+            <Text style={styles.shopRole}>Sede Principal</Text>
           </View>
-          <MaterialIcons name="edit" size={18} color="#f2ca50" />
+          <View style={styles.editIconCircle}>
+            <MaterialIcons name="settings" size={16} color="#000" />
+          </View>
         </Pressable>
 
-        <View style={styles.cardFeatured}>
-          <View style={styles.goldLine} />
-          <Text style={styles.cardLabel}>Ventas hoy</Text>
-          <Text style={styles.cardValue}>{formattedSales}</Text>
-          <Text style={styles.cardTrend}>Calculado desde turnos del dia</Text>
-        </View>
-
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Turnos</Text>
-            <Text style={styles.kpiValue}>{scheduledCount}</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Ocupacion</Text>
-            <Text style={styles.kpiValue}>{occupancyPercent}%</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Proximos turnos</Text>
-
-        {upcomingAppointments.map((item) => (
-          <Pressable
-            key={item.id}
-            style={styles.appointmentCard}
-            onPress={() => setSelectedAppointment(item)}
-          >
-            <Text style={styles.appointmentTime}>{item.time}</Text>
-            <View style={styles.appointmentBody}>
-              <Text style={styles.appointmentName}>{item.client}</Text>
-              <Text style={styles.appointmentService}>{item.service}</Text>
+        {/* SALES CARD */}
+        <View style={styles.salesCard}>
+          <LinearGradient colors={["#1A1A1A", "#111"]} style={styles.salesGradient}>
+            <View style={styles.salesHeader}>
+              <Text style={styles.salesLabel}>INGRESOS ESTIMADOS HOY</Text>
+              <MaterialIcons name="trending-up" size={18} color="#d4af37" />
             </View>
-            <MaterialIcons name="more-horiz" size={18} color="#d0c5af" />
-          </Pressable>
-        ))}
+            <Text style={styles.salesValue}>{formattedSales}</Text>
+            <Text style={styles.salesFooter}>Turnos agendados hasta el momento</Text>
+          </LinearGradient>
+        </View>
 
-        {!upcomingAppointments.length ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
-              No hay turnos proximos para hoy.
-            </Text>
+        {/* KPI GRID */}
+        <View style={styles.kpiGrid}>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>TURNOS</Text>
+            <View style={styles.kpiValueRow}>
+              <Text style={styles.kpiValue}>{scheduledCount}</Text>
+              <MaterialIcons name="event" size={20} color="#333" />
+            </View>
           </View>
-        ) : null}
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>OCUPACIÓN</Text>
+            <View style={styles.kpiValueRow}>
+              <Text style={styles.kpiValue}>{occupancyPercent}%</Text>
+              <View style={styles.occupancyTrack}>
+                <View style={[styles.occupancyFill, { width: `${occupancyPercent}%` }]} />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* APPOINTMENTS SECTION */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Siguientes Turnos</Text>
+          <Pressable onPress={() => router.push("/barber/owner-agenda")}>
+            <Text style={styles.viewAll}>VER AGENDA</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.appointmentsContainer}>
+          {upcomingAppointments.map((item, index) => (
+            <Pressable key={item.id} style={styles.appoCard} onPress={() => setSelectedAppointment(item)}>
+              <View style={styles.timeColumn}>
+                <Text style={styles.appoTime}>{item.time}</Text>
+                <View style={styles.timeLine} />
+              </View>
+              <View style={styles.appoBody}>
+                <Text style={styles.appoClient}>{item.client}</Text>
+                <Text style={styles.appoService}>{item.service}</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color="#444" />
+            </Pressable>
+          ))}
+
+          {!upcomingAppointments.length && (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="event-busy" size={32} color="#222" />
+              <Text style={styles.emptyText}>No hay actividad próxima</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      <Modal
-        visible={Boolean(selectedAppointment)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedAppointment(null)}
-      >
+      {/* MODAL DETALLE */}
+      <Modal visible={Boolean(selectedAppointment)} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Detalle del turno</Text>
-
-            <View style={styles.modalInfoRow}>
-              <Text style={styles.modalInfoLabel}>Hora</Text>
-              <Text style={styles.modalInfoValue}>
-                {selectedAppointment?.time ?? "-"}
-              </Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalHeaderTitle}>Acciones de Turno</Text>
+            
+            <View style={styles.modalDetailBox}>
+               <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Cliente</Text>
+                  <Text style={styles.detailValue}>{selectedAppointment?.client}</Text>
+               </View>
+               <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Servicio</Text>
+                  <Text style={styles.detailValue}>{selectedAppointment?.service}</Text>
+               </View>
+               <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Horario</Text>
+                  <Text style={styles.detailValue}>{selectedAppointment?.time}</Text>
+               </View>
             </View>
-            <View style={styles.modalInfoRow}>
-              <Text style={styles.modalInfoLabel}>Cliente</Text>
-              <Text style={styles.modalInfoValue}>
-                {selectedAppointment?.client ?? "-"}
-              </Text>
-            </View>
-            <View style={styles.modalInfoRow}>
-              <Text style={styles.modalInfoLabel}>Servicio</Text>
-              <Text style={styles.modalInfoValue}>
-                {selectedAppointment?.service ?? "-"}
-              </Text>
-            </View>
-
-            <Pressable
-              style={styles.modalAgendaButton}
-              onPress={() => {
-                setSelectedAppointment(null);
-                router.push("/barber/owner-agenda");
-              }}
-            >
-              <MaterialIcons name="event-note" size={16} color="#241a00" />
-              <Text style={styles.modalAgendaButtonText}>Ver en Agenda</Text>
-            </Pressable>
 
             <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  void updateSelectedAppointmentStatus("no_asistio");
-                }}
-                disabled={isUpdatingAppointment}
-              >
-                <Text style={styles.modalCancelText}>No asistio</Text>
+              <Pressable style={styles.actionBtnOutline} onPress={() => updateSelectedAppointmentStatus("no_asistio")}>
+                <Text style={styles.actionTextCancel}>Marcar Falta</Text>
               </Pressable>
-              <Pressable
-                style={styles.modalConfirmButton}
-                onPress={() => {
-                  void updateSelectedAppointmentStatus("en_progreso");
-                }}
-                disabled={isUpdatingAppointment}
-              >
-                <Text style={styles.modalConfirmText}>
-                  {isUpdatingAppointment ? "Actualizando..." : "Iniciar"}
-                </Text>
-              </Pressable>
+              
+              <LinearGradient colors={["#d4af37", "#b8962e"]} style={styles.actionBtnGradient}>
+                <Pressable style={styles.actionBtnPress} onPress={() => updateSelectedAppointmentStatus("en_progreso")}>
+                  <Text style={styles.actionTextConfirm}>INICIAR SERVICIO</Text>
+                </Pressable>
+              </LinearGradient>
             </View>
+
+            <Pressable style={styles.modalCloseBtn} onPress={() => setSelectedAppointment(null)}>
+              <Text style={styles.modalCloseText}>Cerrar Detalle</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -290,220 +241,85 @@ export default function DashboardOwnerScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
   topBar: {
-    height: 70,
+    height: 90,
+    paddingTop: 40,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.9)",
+    backgroundColor: "#0F0F0F",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1A1A1A",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    color: "#d4af37",
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  avatarWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#4d4635",
-  },
+  iconButton: { width: 40, height: 40, justifyContent: "center" },
+  brandContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
+  brandText: { color: "#FFF", fontSize: 14, fontWeight: "900", letterSpacing: 4 },
+  brandDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#d4af37" },
+  avatarWrap: { width: 36, height: 36, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#333" },
   avatar: { width: "100%", height: "100%" },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 110,
-    gap: 14,
-  },
-  title: { color: "#e5e2e1", fontSize: 34, fontWeight: "800" },
-  subtitle: { color: "#d0c5af", fontSize: 12 },
-  barbershopCard: {
-    marginTop: 6,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  barbershopImageWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: "hidden",
-    backgroundColor: "#2a2a2a",
-  },
-  barbershopImage: {
-    width: "100%",
-    height: "100%",
-  },
-  barbershopImageFallback: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  barbershopCardBody: { flex: 1 },
-  barbershopCardTitle: {
-    color: "#e5e2e1",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  barbershopCardSubtitle: {
-    color: "#99907c",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  cardFeatured: {
-    marginTop: 6,
-    borderRadius: 14,
-    backgroundColor: "#2a2a2a",
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    overflow: "hidden",
-  },
-  goldLine: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: "#d4af37",
-  },
-  cardLabel: {
-    color: "#d0c5af",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  cardValue: {
-    color: "#e5e2e1",
-    fontSize: 34,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  cardTrend: {
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  kpiRow: { flexDirection: "row", gap: 10 },
-  kpiCard: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
-  },
-  kpiLabel: {
-    color: "#99907c",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  kpiValue: { color: "#e5e2e1", fontSize: 28, fontWeight: "800", marginTop: 6 },
-  sectionTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 10,
-  },
-  appointmentCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  appointmentTime: {
-    color: "#f2ca50",
-    fontSize: 16,
-    fontWeight: "800",
-    width: 52,
-  },
-  appointmentBody: { flex: 1 },
-  appointmentName: { color: "#e5e2e1", fontSize: 15, fontWeight: "700" },
-  appointmentService: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  emptyCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    backgroundColor: "#1c1b1b",
-    padding: 14,
-  },
-  emptyText: { color: "#d0c5af", fontSize: 12 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
-    padding: 22,
-  },
-  modalCard: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 16,
-    gap: 10,
-  },
-  modalTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
-  modalInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  modalInfoLabel: { color: "#99907c", fontSize: 12 },
-  modalInfoValue: { color: "#e5e2e1", fontSize: 14, fontWeight: "700" },
-  modalAgendaButton: {
-    minHeight: 42,
-    borderRadius: 10,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 4,
-  },
-  modalAgendaButtonText: { color: "#241a00", fontSize: 13, fontWeight: "800" },
-  modalActions: { flexDirection: "row", gap: 8 },
-  modalCancelButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "rgba(255,180,171,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCancelText: { color: "#ffb4ab", fontSize: 13, fontWeight: "700" },
-  modalConfirmButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 9,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(212,175,55,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalConfirmText: { color: "#f2ca50", fontSize: 13, fontWeight: "800" },
+  
+  content: { padding: 20, paddingBottom: 110 },
+  welcomeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
+  title: { color: "#FFF", fontSize: 28, fontWeight: "900" },
+  statusBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "#1A1300", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, gap: 6, borderWidth: 1, borderColor: "#332a00" },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#d4af37" },
+  statusText: { color: "#d4af37", fontSize: 10, fontWeight: "900" },
+
+  shopCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#111", padding: 12, borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: "#222" },
+  shopImageContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#1A1A1A", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  shopImage: { width: "100%", height: "100%" },
+  shopInfo: { flex: 1, marginLeft: 12 },
+  shopName: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+  shopRole: { color: "#666", fontSize: 12, fontWeight: "600" },
+  editIconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#d4af37", alignItems: "center", justifyContent: "center" },
+
+  salesCard: { height: 160, marginBottom: 20, borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "#333" },
+  salesGradient: { flex: 1, padding: 20, justifyContent: "center" },
+  salesHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  salesLabel: { color: "#777", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  salesValue: { color: "#FFF", fontSize: 42, fontWeight: "900", marginVertical: 8 },
+  salesFooter: { color: "#d4af37", fontSize: 12, fontWeight: "700", opacity: 0.8 },
+
+  kpiGrid: { flexDirection: "row", gap: 12, marginBottom: 25 },
+  kpiCard: { flex: 1, backgroundColor: "#111", padding: 16, borderRadius: 20, borderWidth: 1, borderColor: "#222" },
+  kpiLabel: { color: "#555", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  kpiValueRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  kpiValue: { color: "#FFF", fontSize: 24, fontWeight: "900" },
+  occupancyTrack: { width: 40, height: 4, backgroundColor: "#222", borderRadius: 2, overflow: "hidden" },
+  occupancyFill: { height: "100%", backgroundColor: "#d4af37" },
+
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 15 },
+  sectionTitle: { color: "#FFF", fontSize: 18, fontWeight: "800" },
+  viewAll: { color: "#d4af37", fontSize: 12, fontWeight: "900" },
+
+  appointmentsContainer: { gap: 12 },
+  appoCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#111", padding: 16, borderRadius: 20, borderWidth: 1, borderColor: "#1A1A1A" },
+  timeColumn: { alignItems: "center", width: 50 },
+  appoTime: { color: "#d4af37", fontSize: 14, fontWeight: "900" },
+  timeLine: { width: 2, height: 20, backgroundColor: "#222", marginTop: 4 },
+  appoBody: { flex: 1, marginLeft: 10 },
+  appoClient: { color: "#FFF", fontSize: 15, fontWeight: "700" },
+  appoService: { color: "#666", fontSize: 12, marginTop: 2 },
+
+  emptyState: { padding: 40, alignItems: "center", gap: 10 },
+  emptyText: { color: "#333", fontSize: 14, fontWeight: "600" },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "#111", borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, paddingBottom: 40, borderWidth: 1, borderColor: "#222" },
+  modalHandle: { width: 40, height: 4, backgroundColor: "#333", borderRadius: 2, alignSelf: "center", marginBottom: 20 },
+  modalHeaderTitle: { color: "#FFF", fontSize: 18, fontWeight: "900", textAlign: "center", marginBottom: 20 },
+  modalDetailBox: { backgroundColor: "#0A0A0A", borderRadius: 20, padding: 15, gap: 12, marginBottom: 25 },
+  detailRow: { flexDirection: "row", justifyContent: "space-between" },
+  detailLabel: { color: "#555", fontWeight: "700" },
+  detailValue: { color: "#FFF", fontWeight: "800" },
+  modalActions: { flexDirection: "row", gap: 12 },
+  actionBtnOutline: { flex: 1, height: 55, borderRadius: 16, borderWidth: 1, borderColor: "#ff444433", alignItems: "center", justifyContent: "center" },
+  actionTextCancel: { color: "#ff4444", fontWeight: "800", fontSize: 13 },
+  actionBtnGradient: { flex: 1, height: 55, borderRadius: 16 },
+  actionBtnPress: { flex: 1, alignItems: "center", justifyContent: "center" },
+  actionTextConfirm: { color: "#000", fontWeight: "900", fontSize: 13 },
+  modalCloseBtn: { marginTop: 20, alignSelf: "center" },
+  modalCloseText: { color: "#555", fontWeight: "700" },
 });

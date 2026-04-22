@@ -1,23 +1,25 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  ActivityIndicator,
 } from "react-native";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-    getOwnedBarbershopProfile,
-    saveOwnedBarbershopProfile,
+  getOwnedBarbershopProfile,
+  saveOwnedBarbershopProfile,
 } from "@/lib/owned-barbershop";
 
 export default function OwnerBarbershopProfileScreen() {
@@ -33,14 +35,12 @@ export default function OwnerBarbershopProfileScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadProfile = async () => {
       const profile = await getOwnedBarbershopProfile();
       if (!isMounted || !profile) {
         setIsLoading(false);
         return;
       }
-
       setName(profile.name);
       setAddress(profile.address);
       setPhone(profile.phone);
@@ -48,65 +48,33 @@ export default function OwnerBarbershopProfileScreen() {
       setImageUri(profile.imageUri ?? "");
       setIsLoading(false);
     };
-
     void loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
-  const errors = useMemo(() => {
-    const nextErrors = {
-      name: "",
-      address: "",
-      phone: "",
-    };
-
-    if (!name.trim()) {
-      nextErrors.name = "Ingresa el nombre de la barberia.";
-    }
-
-    if (!address.trim()) {
-      nextErrors.address = "Ingresa una direccion valida.";
-    }
-
-    if (!phone.trim()) {
-      nextErrors.phone = "Ingresa telefono de contacto.";
-    }
-
-    return nextErrors;
-  }, [address, name, phone]);
+  const errors = useMemo(() => ({
+    name: !name.trim() ? "El nombre es obligatorio" : "",
+    address: !address.trim() ? "La dirección es obligatoria" : "",
+    phone: !phone.trim() ? "El teléfono es obligatorio" : "",
+  }), [address, name, phone]);
 
   const hasErrors = Boolean(errors.name || errors.address || errors.phone);
 
   const handlePickImage = async () => {
-    if (isPickingImage || isSaving) {
-      return;
-    }
-
+    if (isPickingImage || isSaving) return;
     setIsPickingImage(true);
-
     try {
-      const permissionResponse =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permissionResponse.granted) {
-        return;
-      }
+      const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!granted) return;
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
-      if (result.canceled || !result.assets.length) {
-        return;
-      }
-
-      setImageUri(result.assets[0]?.uri ?? "");
+      if (!result.canceled) setImageUri(result.assets[0].uri);
     } finally {
       setIsPickingImage(false);
     }
@@ -114,10 +82,7 @@ export default function OwnerBarbershopProfileScreen() {
 
   const handleSave = async () => {
     setTouched(true);
-
-    if (hasErrors || isSaving) {
-      return;
-    }
+    if (hasErrors || isSaving) return;
 
     setIsSaving(true);
     try {
@@ -128,8 +93,9 @@ export default function OwnerBarbershopProfileScreen() {
         description: description.trim(),
         imageUri,
       });
-
       router.replace("/barber/dashboard-owner");
+    } catch (error) {
+      Alert.alert("Error", "No se pudieron guardar los cambios.");
     } finally {
       setIsSaving(false);
     }
@@ -138,169 +104,110 @@ export default function OwnerBarbershopProfileScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.replace("/barber/owner-more-settings")}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#d0c5af" />
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Feather name="chevron-left" size={28} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>Datos de barberia</Text>
-        <View style={styles.spacer} />
+        <Text style={styles.brand}>Perfil de Barbería</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardWrap}
+        style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.imageSection}>
-            <Text style={styles.label}>Logo o foto</Text>
-            <Pressable
-              style={styles.imagePickerButton}
-              onPress={() => void handlePickImage()}
-            >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          
+          {/* Header de Imagen */}
+          <View style={styles.imageContainer}>
+            <Pressable style={styles.imageFrame} onPress={handlePickImage}>
               {isLoading ? (
-                <Skeleton style={styles.imageSkeleton} borderRadius={12} />
+                <Skeleton style={styles.imageFull} borderRadius={100} />
               ) : imageUri ? (
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.imagePreview}
-                  contentFit="cover"
-                />
+                <Image source={{ uri: imageUri }} style={styles.imageFull} contentFit="cover" />
               ) : (
                 <View style={styles.imagePlaceholder}>
-                  <MaterialIcons name="storefront" size={28} color="#d0c5af" />
-                  <Text style={styles.imagePlaceholderTitle}>
-                    Agregar imagen
-                  </Text>
-                  <Text style={styles.imagePlaceholderText}>
-                    Esta imagen se mostrara en tu panel.
-                  </Text>
+                  <Feather name="camera" size={32} color="#4d4635" />
                 </View>
               )}
+              <View style={styles.editBadge}>
+                <Feather name="edit-2" size={14} color="#000" />
+              </View>
             </Pressable>
-
-            <View style={styles.imageActionsRow}>
-              <Pressable
-                style={styles.imageActionButton}
-                onPress={() => void handlePickImage()}
-                disabled={isPickingImage || isSaving}
-              >
-                <MaterialIcons name="photo-library" size={16} color="#f2ca50" />
-                <Text style={styles.imageActionText}>
-                  {isPickingImage
-                    ? "Abriendo galeria..."
-                    : imageUri
-                      ? "Cambiar imagen"
-                      : "Elegir imagen"}
-                </Text>
-              </Pressable>
-
-              {imageUri ? (
-                <Pressable
-                  style={styles.imageRemoveButton}
-                  onPress={() => setImageUri("")}
-                  disabled={isSaving}
-                >
-                  <MaterialIcons
-                    name="delete-outline"
-                    size={16}
-                    color="#ffb4ab"
-                  />
-                  <Text style={styles.imageRemoveText}>Quitar</Text>
-                </Pressable>
-              ) : null}
-            </View>
+            <Text style={styles.imageHint}>Logo de la sucursal</Text>
           </View>
 
-          <View style={styles.formSection}>
-            {isLoading ? (
-              <>
-                <Text style={styles.label}>Nombre de la barberia</Text>
-                <Skeleton style={styles.inputSkeleton} />
+          {/* Formulario */}
+          <View style={styles.formCard}>
+            <Text style={styles.sectionTitle}>Información General</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nombre Comercial</Text>
+              <TextInput
+                style={[styles.input, touched && errors.name && styles.inputError]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Ej. Black Beard Studio"
+                placeholderTextColor="#444"
+                editable={!isLoading}
+              />
+              {touched && errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+            </View>
 
-                <Text style={styles.label}>Direccion</Text>
-                <Skeleton style={styles.inputSkeleton} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Dirección Local</Text>
+              <TextInput
+                style={[styles.input, touched && errors.address && styles.inputError]}
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Calle 123, Ciudad"
+                placeholderTextColor="#444"
+                editable={!isLoading}
+              />
+              {touched && errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
+            </View>
 
-                <Text style={styles.label}>Telefono</Text>
-                <Skeleton style={styles.inputSkeleton} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Teléfono de Contacto</Text>
+              <TextInput
+                style={[styles.input, touched && errors.phone && styles.inputError]}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                placeholder="+54 11 ..."
+                placeholderTextColor="#444"
+                editable={!isLoading}
+              />
+              {touched && errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            </View>
 
-                <Text style={styles.label}>Descripcion</Text>
-                <Skeleton style={styles.textAreaSkeleton} />
-              </>
-            ) : (
-              <>
-                <Text style={styles.label}>Nombre de la barberia</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ej: Navaja Centro"
-                  placeholderTextColor="#7b7466"
-                  editable={!isLoading}
-                />
-                {touched && errors.name ? (
-                  <Text style={styles.errorText}>{errors.name}</Text>
-                ) : null}
-
-                <Text style={styles.label}>Direccion</Text>
-                <TextInput
-                  style={styles.input}
-                  value={address}
-                  onChangeText={setAddress}
-                  placeholder="Calle, numero y zona"
-                  placeholderTextColor="#7b7466"
-                  editable={!isLoading}
-                />
-                {touched && errors.address ? (
-                  <Text style={styles.errorText}>{errors.address}</Text>
-                ) : null}
-
-                <Text style={styles.label}>Telefono</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholder="Ej: +54 11 5555 5555"
-                  placeholderTextColor="#7b7466"
-                  editable={!isLoading}
-                />
-                {touched && errors.phone ? (
-                  <Text style={styles.errorText}>{errors.phone}</Text>
-                ) : null}
-
-                <Text style={styles.label}>Descripcion</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="Cuenta el estilo y propuesta de tu barberia"
-                  placeholderTextColor="#7b7466"
-                  multiline
-                  textAlignVertical="top"
-                  editable={!isLoading}
-                />
-              </>
-            )}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Descripción / Bio</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Breve historia o servicios destacados..."
+                placeholderTextColor="#444"
+                multiline
+                numberOfLines={4}
+                editable={!isLoading}
+              />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <Pressable
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          onPress={() => {
-            void handleSave();
-          }}
+          style={[styles.saveButton, (isSaving || hasErrors && touched) && styles.saveButtonDisabled]}
+          onPress={handleSave}
           disabled={isSaving || isLoading}
         >
-          <Text style={styles.saveButtonText}>
-            {isSaving ? "Guardando..." : "Guardar cambios"}
-          </Text>
+          {isSaving ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.saveButtonText}>Actualizar Perfil</Text>
+          )}
         </Pressable>
       </View>
     </View>
@@ -308,179 +215,106 @@ export default function OwnerBarbershopProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#0c0c0c" },
   topBar: {
-    height: 72,
+    height: 100,
+    paddingTop: 40,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
-  spacer: { width: 36, height: 36 },
-  keyboardWrap: { flex: 1 },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 120,
-    gap: 16,
-  },
-  imageSection: {
-    borderRadius: 14,
-    backgroundColor: "#191817",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.18)",
-    padding: 14,
-    gap: 10,
-  },
-  formSection: {
-    borderRadius: 14,
-    backgroundColor: "#191817",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.18)",
-    padding: 14,
-    gap: 8,
-  },
-  label: {
-    color: "#d0c5af",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  imagePickerButton: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.3)",
-    minHeight: 170,
-    overflow: "hidden",
-  },
-  imagePreview: {
-    width: "100%",
-    height: 170,
-  },
-  imageSkeleton: {
-    width: "100%",
-    height: 170,
-  },
-  imagePlaceholder: {
-    minHeight: 170,
+    backgroundColor: "#151515",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 12,
   },
-  imagePlaceholderTitle: {
-    color: "#e5e2e1",
-    fontSize: 14,
-    fontWeight: "700",
+  brand: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  
+  content: { padding: 24, paddingBottom: 120 },
+  
+  imageContainer: { alignItems: 'center', marginBottom: 32 },
+  imageFrame: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "#d4af37",
+    padding: 4,
+    backgroundColor: "#0c0c0c",
   },
-  imagePlaceholderText: {
-    color: "#99907c",
-    fontSize: 12,
-    textAlign: "center",
+  imageFull: { width: "100%", height: "100%", borderRadius: 60 },
+  imagePlaceholder: { 
+    flex: 1, 
+    borderRadius: 60, 
+    backgroundColor: "#151515", 
+    alignItems: 'center', 
+    justifyContent: 'center' 
   },
-  imageActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  editBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: "#d4af37",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: "#0c0c0c",
   },
-  imageActionButton: {
-    minHeight: 40,
-    borderRadius: 10,
-    backgroundColor: "#2a2a2a",
+  imageHint: { color: "#555", fontSize: 12, marginTop: 12, fontWeight: "600", textTransform: 'uppercase' },
+
+  formCard: {
+    backgroundColor: "#121212",
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.3)",
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    flex: 1,
+    borderColor: "#1a1a1a",
   },
-  imageActionText: {
-    color: "#f2ca50",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  imageRemoveButton: {
-    minHeight: 40,
-    borderRadius: 10,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(255,180,171,0.25)",
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  imageRemoveText: {
-    color: "#ffb4ab",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  sectionTitle: { color: "#d4af37", fontSize: 14, fontWeight: "800", marginBottom: 20, textTransform: 'uppercase', letterSpacing: 1 },
+  
+  inputGroup: { marginBottom: 20 },
+  label: { color: "#888", fontSize: 12, fontWeight: "600", marginBottom: 8, marginLeft: 4 },
   input: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: "#0e0e0e",
+    backgroundColor: "#080808",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
+    color: "#fff",
+    fontSize: 15,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.3)",
-    color: "#e5e2e1",
-    fontSize: 14,
-    paddingHorizontal: 14,
+    borderColor: "#222",
   },
-  inputSkeleton: {
-    minHeight: 48,
-    borderRadius: 12,
-  },
-  textAreaSkeleton: {
-    minHeight: 96,
-    borderRadius: 12,
-  },
-  textArea: {
-    minHeight: 96,
-    paddingTop: 12,
-  },
-  errorText: {
-    color: "#ffb4ab",
-    fontSize: 12,
-    marginTop: -2,
-  },
+  inputError: { borderColor: "#ffb4ab" },
+  textArea: { height: 100, paddingTop: 14, textAlignVertical: 'top' },
+  errorText: { color: "#ffb4ab", fontSize: 11, marginTop: 5, marginLeft: 4 },
+
   footer: {
     position: "absolute",
-    left: 0,
-    right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "rgba(19,19,19,0.95)",
+    width: '100%',
+    padding: 24,
+    backgroundColor: "#0c0c0c",
     borderTopWidth: 1,
-    borderTopColor: "rgba(77,70,53,0.22)",
+    borderTopColor: "#1a1a1a",
   },
   saveButton: {
-    minHeight: 52,
-    borderRadius: 12,
+    height: 58,
+    borderRadius: 18,
     backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#d4af37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: "#241a00",
-    fontSize: 15,
-    fontWeight: "800",
-  },
+  saveButtonDisabled: { backgroundColor: "#333", shadowOpacity: 0 },
+  saveButtonText: { color: "#000", fontSize: 16, fontWeight: "800" },
 });

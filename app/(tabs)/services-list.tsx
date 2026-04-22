@@ -1,111 +1,76 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import type { User } from "@supabase/supabase-js";
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from "react-native";
 
+import { getPublicBarbershops } from "@/lib/booking-catalog";
 import { getFavoriteShops, toggleFavoriteShop } from "@/lib/favorites";
+import { getOwnedBarbershopProfile } from "@/lib/owned-barbershop";
 import { supabase } from "@/lib/supabase";
-import {
-    getGoogleAvatarFromProviderToken,
-    getUserAvatarUri,
-    isGoogleUser,
-} from "@/lib/user-avatar";
+import { getUserAvatarUri } from "@/lib/user-avatar";
 
-const AVATAR_URI =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuC7Jib8WJJf28MiL9QZlHjmVQ71-EeLJUG5eNdo2uL7djrEoU3gbzFhVN_QYVqdEOFx8zUmVJAkKGbI-FDuHHxzLxcUZuIlrHWtw1QdHK9KFdZ1oTvdmljOtfOxzmam6jlxe0_li39fNXDzNclmrwMB4Oo0giavWQvlmaLZjaUpgpsFoBImIj3LJmVwlssXHuUQEu_qPm5gtN1B1Es2xGaCw5T5A_lpwMPGET4xjX_-0YQvv8JmrTT-ID0YXHOIsx5dfhR_z_GYUWoV";
+// Utilidad para obtener el nombre completo del usuario
+const getDisplayName = (user: User | null) => {
+  if (!user) return "Usuario";
+  const displayNameFromMeta =
+    user.user_metadata?.display_name ??
+    user.user_metadata?.full_name ??
+    user.user_metadata?.name ??
+    user.user_metadata?.given_name;
 
-const ateliers = [
-  {
-    id: "1",
-    name: "El Dorado Classic",
-    address: "Av. de la Libertad 124, Roma Nte.",
-    rating: "4.9",
-    reviews: "128",
-    distance: "1.2 km",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCNy_lzi9Q7Qvr1H79_n-wkr2s4QGH8bB8pMKKnXmLxpDjGR2NkonLIIH6VHdn2dzVxDlkRLN2no6Woc1jB-kL5Nu9h68TWwf0pWle_nZ6G0zfxVsDtWi8SjZl_xJp0ZBQ0eZhT1WhjVi_HIPYfneeNtux0BvQ6HuRpH8-RAKRCJlwa9w45WttD2U55lsCHPyNDjwtFUcxFsbgZ8VO4_PYyKQkN8-EWZ_9cU1y_0sMsIBB3YtIuOzDKOuO0dPNOfYe80mrp0GzNtKiR",
-  },
-  {
-    id: "2",
-    name: "Obsidian Room",
-    address: "Callejon del Sastre 45, Condesa",
-    rating: "4.8",
-    reviews: "94",
-    distance: "2.4 km",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDOkx9i8dYIo0qGm3aOK6SZA0mp3wigcQblgS5kuIU8CJGQGAJWy9hafP1IzYTWxdgpGoykh2-KGKQPiIh1zibPdUc1sbZJ2fVvZb7HLRL5-eEpL8W2SdjqzDkAa1gCOi9WsWRN2V1S_WKmMOa0VO4RkFqB9R2r9CPNJ2dOWtmvnHcAp7YZXsENFrbed8Cs6GD1hk7PuwYAEhAv9DkEBMyNxfU-jUrPqxhK-YBXmkvZNTQ6-UHnc7IPLy1JoTA4vI5B5vGTva2PuACp",
-  },
-  {
-    id: "3",
-    name: "Gentleman's Quarter",
-    address: "Paseo de la Reforma 332, Juarez",
-    rating: "5.0",
-    reviews: "215",
-    distance: "3.1 km",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBx3Ak9fNvSdMlB7Oj73FqvPcK8P9pMqPrvw1WU9a8yDyQwP8onJsUIo_NBEd6A-puFqNX9riDfKwDOQr2rw9raGTmK-9h_cizzXw7jT1ECZSsP8mnDZsERSRpsoEI3dz7bNMiKH6uEDHOhwBhdNMLf7f-ndnVV_mZ_MQ-8xw4BvMrYid1tGTLkcWue5kU7KmVxm742aqcoKvEX7SsxzP7kIeRRV_bqNgPPyM98lMYcN6nqjLLzSUO7LGDyOzpfKHYbvEJg4LSeq5X1",
-  },
-];
+  if (typeof displayNameFromMeta === "string" && displayNameFromMeta.trim()) {
+    return displayNameFromMeta.trim();
+  }
+  return user.email ? user.email.split("@")[0] : "Usuario";
+};
 
 export default function ServicesListScreen() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
+  const [avatarUri, setAvatarUri] = useState("");
   const [favoriteShopIds, setFavoriteShopIds] = useState<string[]>([]);
+  const [displayName, setDisplayName] = useState("Usuario");
+  const [isLoadingShops, setIsLoadingShops] = useState(true);
+  const [shopsError, setShopsError] = useState("");
+  const [ateliers, setAteliers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      address: string;
+      rating: string;
+      reviews: string;
+      image: string;
+      isOwned?: boolean;
+    }>
+  >([]);
 
-  useFocusEffect(() => {
-    let isMounted = true;
+  // CARGAR FAVORITOS
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      getFavoriteShops().then((favorites) => {
+        if (isMounted) setFavoriteShopIds(favorites.map((item) => item.id));
+      });
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
 
-    const loadFavorites = async () => {
-      const favorites = await getFavoriteShops();
-
-      if (!isMounted) {
-        return;
-      }
-
-      setFavoriteShopIds(favorites.map((item) => item.id));
-    };
-
-    void loadFavorites();
-
-    return () => {
-      isMounted = false;
-    };
-  });
-
+  // CARGAR AVATAR Y NOMBRE USUARIO
   useEffect(() => {
     let isMounted = true;
-
-    const applyUserData = async (user: User | null) => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData.session?.user ?? null;
-      const userForAvatar = sessionUser ?? user;
-
-      const resolvedAvatar = getUserAvatarUri(userForAvatar, AVATAR_URI);
-      setAvatarUri(resolvedAvatar);
-
-      if (!isGoogleUser(userForAvatar)) {
-        return;
-      }
-
-      const googleAvatar = await getGoogleAvatarFromProviderToken(
-        sessionData.session?.provider_token,
-      );
-
-      if (!isMounted || !googleAvatar) {
-        return;
-      }
-
-      setAvatarUri(googleAvatar);
-    };
 
     supabase.auth
       .getUser()
@@ -113,55 +78,138 @@ export default function ServicesListScreen() {
         if (!isMounted) {
           return;
         }
-
-        void applyUserData(data.user ?? null);
+        setAvatarUri(getUserAvatarUri(data.user, ""));
+        setDisplayName(getDisplayName(data.user ?? null));
       })
       .catch(() => {
         if (!isMounted) {
           return;
         }
-
-        void applyUserData(null);
+        setAvatarUri("");
+        setDisplayName("Usuario");
       });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) {
-        return;
-      }
-
-      void applyUserData(session?.user ?? null);
-    });
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadShops = async () => {
+      setIsLoadingShops(true);
+      setShopsError("");
+
+      try {
+        const [shops, ownedShop] = await Promise.all([
+          getPublicBarbershops(),
+          getOwnedBarbershopProfile(),
+        ]);
+
+        const nextShops = [...shops];
+        if (ownedShop?.name.trim() && ownedShop.address.trim()) {
+          const ownedName = ownedShop.name.trim();
+          const ownedAddress = ownedShop.address.trim();
+          const ownedShopId = ownedShop.id?.trim();
+          const alreadyIncluded = nextShops.some(
+            (shop) =>
+              shop.name.trim().toLowerCase() === ownedName.toLowerCase() ||
+              shop.address.trim().toLowerCase() === ownedAddress.toLowerCase(),
+          );
+
+          if (!alreadyIncluded && ownedShopId) {
+            nextShops.unshift({
+              id: ownedShopId,
+              name: ownedName,
+              address: ownedAddress,
+              rating: "5.0",
+              reviews: "0",
+              logoUrl: ownedShop.imageUri,
+              isOwned: true,
+            });
+          }
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAteliers(
+          nextShops.map((shop) => ({
+            id: shop.id,
+            name: shop.name,
+            address: shop.address,
+            rating: shop.rating,
+            reviews: shop.reviews,
+            image: shop.logoUrl,
+            isOwned: shop.isOwned,
+          })),
+        );
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+        setAteliers([]);
+        setShopsError("No pudimos cargar barberías. Intenta nuevamente.");
+      } finally {
+        if (isMounted) {
+          setIsLoadingShops(false);
+        }
+      }
+    };
+
+    void loadShops();
+
+    return () => {
+      isMounted = false;
     };
   }, []);
 
   const filteredAteliers = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return ateliers;
-    }
-
+    const q = searchQuery.toLowerCase().trim();
     return ateliers.filter(
-      (atelier) =>
-        atelier.name.toLowerCase().includes(normalizedQuery) ||
-        atelier.address.toLowerCase().includes(normalizedQuery),
+      (a) =>
+        a.name.toLowerCase().includes(q) || a.address.toLowerCase().includes(q),
     );
-  }, [searchQuery]);
+  }, [ateliers, searchQuery]);
 
   return (
     <View style={styles.screen}>
+      <StatusBar barStyle="light-content" />
+
+      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.brandTitle}>NAVAJA DORADA</Text>
-        <Image
-          source={{ uri: avatarUri }}
-          style={styles.avatar}
-          contentFit="cover"
-        />
+        <View>
+          <Text style={styles.welcomeText}>Hola, {displayName}</Text>
+          <Text style={styles.brandTitle}>
+            NAVAJA <Text style={styles.gold}>DORADA</Text>
+          </Text>
+        </View>
+        <Pressable
+          style={styles.avatarContainer}
+          onPress={() => router.push("/(tabs)/profile")}
+        >
+          {avatarUri ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>
+                {displayName
+                  .split(" ")
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase() || "U"}
+              </Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <ScrollView
@@ -169,42 +217,53 @@ export default function ServicesListScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* SELECTOR MAPA/LISTA */}
         <View style={styles.toggleWrap}>
-          <View style={styles.toggleContainer}>
+          <BlurView intensity={20} tint="dark" style={styles.toggleContainer}>
             <Pressable
               style={styles.toggleInactive}
               onPress={() => router.replace("/(tabs)/explore")}
             >
               <Text style={styles.toggleInactiveText}>Mapa</Text>
             </Pressable>
-            <Pressable style={styles.toggleActive}>
+            <View style={styles.toggleActive}>
               <Text style={styles.toggleActiveText}>Lista</Text>
-            </Pressable>
+            </View>
+          </BlurView>
+        </View>
+
+        {/* BUSCADOR */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <MaterialIcons name="search" size={20} color="#D4AF37" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre o ubicación..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
         </View>
 
-        <View style={styles.searchWrap}>
-          <MaterialIcons
-            name="search"
-            size={21}
-            color="rgba(208, 197, 175, 0.45)"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar barberia..."
-            placeholderTextColor="rgba(208, 197, 175, 0.42)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <Text style={styles.sectionTitle}>
+          Ateliers <Text style={styles.gold}>Premium</Text>
+        </Text>
 
-        <View style={styles.titleRow}>
-          <Text style={styles.sectionTitle}>Ateliers Disponibles</Text>
-          <Text style={styles.subtitle}>Cerca de ti</Text>
-        </View>
-
+        {/* LISTA DE TARJETAS */}
         <View style={styles.listWrap}>
+          {isLoadingShops ? (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyText}>Cargando barberías...</Text>
+            </View>
+          ) : null}
+
+          {!isLoadingShops && shopsError ? (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyText}>{shopsError}</Text>
+            </View>
+          ) : null}
+
           {filteredAteliers.map((atelier) => (
             <Pressable
               key={atelier.id}
@@ -212,367 +271,310 @@ export default function ServicesListScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/booking-service",
-                  params: {
-                    shopId: atelier.id,
-                    shopName: atelier.name,
-                  },
+                  params: { shopId: atelier.id },
                 })
               }
             >
-              <View style={styles.cardAccent} />
-
-              <Pressable
-                style={styles.favoriteButton}
-                onPress={() => {
-                  void toggleFavoriteShop({
-                    id: atelier.id,
-                    name: atelier.name,
-                    address: atelier.address,
-                  }).then((result) => {
-                    setFavoriteShopIds(result.favorites.map((item) => item.id));
-                  });
-                }}
-              >
-                <MaterialIcons
-                  name={
-                    favoriteShopIds.includes(atelier.id)
-                      ? "favorite"
-                      : "favorite-border"
-                  }
-                  size={18}
-                  color="#f2ca50"
+              {atelier.image ? (
+                <Image
+                  source={{ uri: atelier.image }}
+                  style={styles.cardImage}
+                  contentFit="cover"
                 />
-              </Pressable>
+              ) : (
+                <View style={styles.cardImageFallback}>
+                  <MaterialIcons name="storefront" size={24} color="#D4AF37" />
+                </View>
+              )}
 
-              <Image
-                source={{ uri: atelier.image }}
-                style={styles.cardImage}
-                contentFit="cover"
-              />
-
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>{atelier.name}</Text>
-                <Text style={styles.cardAddress}>{atelier.address}</Text>
-
-                <View style={styles.metaRow}>
-                  <View style={styles.metaGroup}>
-                    <MaterialIcons name="star" size={14} color="#f2ca50" />
-                    <Text style={styles.metaText}>
-                      {atelier.rating}{" "}
-                      <Text style={styles.metaMuted}>({atelier.reviews})</Text>
-                    </Text>
-                  </View>
-
-                  <View style={styles.metaDot} />
-
-                  <View style={styles.metaGroup}>
+              <View style={styles.cardInfo}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {atelier.name}
+                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      toggleFavoriteShop(atelier).then((res) =>
+                        setFavoriteShopIds(res.favorites.map((f) => f.id)),
+                      )
+                    }
+                    style={styles.favBtn}
+                  >
                     <MaterialIcons
-                      name="location-on"
-                      size={14}
-                      color="#9f9685"
+                      name={
+                        favoriteShopIds.includes(atelier.id)
+                          ? "favorite"
+                          : "favorite-border"
+                      }
+                      size={18}
+                      color="#D4AF37"
                     />
-                    <Text style={styles.metaText}>{atelier.distance}</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.cardAddress} numberOfLines={1}>
+                  {atelier.address}
+                </Text>
+
+                <View style={styles.cardMeta}>
+                  {atelier.isOwned ? (
+                    <View style={styles.metaBadgeOwned}>
+                      <MaterialIcons name="verified" size={12} color="#000" />
+                      <Text style={styles.metaTextOwned}>Tu barbería</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.metaBadge}>
+                    <MaterialIcons name="star" size={12} color="#D4AF37" />
+                    <Text style={styles.metaText}>{atelier.rating}</Text>
                   </View>
                 </View>
               </View>
 
               <MaterialIcons
                 name="chevron-right"
-                size={23}
-                color="rgba(208, 197, 175, 0.35)"
+                size={20}
+                color="#333"
+                style={{ marginLeft: 5 }}
               />
             </Pressable>
           ))}
-
-          {!filteredAteliers.length ? (
-            <View style={styles.emptyStateCard}>
-              <Text style={styles.emptyStateTitle}>Sin resultados</Text>
-              <Text style={styles.emptyStateText}>
-                Prueba con otro nombre o direccion.
-              </Text>
-            </View>
-          ) : null}
         </View>
+
+        {!isLoadingShops && !shopsError && filteredAteliers.length === 0 && (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="search-off" size={40} color="#333" />
+            <Text style={styles.emptyText}>
+              No encontramos resultados para "{searchQuery}"
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <Pressable
-          style={[styles.navItem, styles.navItemActive]}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <MaterialIcons name="content-cut" size={22} color="#d4af37" />
-          <Text style={styles.navTextActive}>Atelier</Text>
-        </Pressable>
+      {/* --- MENU INFERIOR 4 BOTONES --- */}
+      <View style={styles.navContainer}>
+        <BlurView intensity={90} tint="dark" style={styles.bottomNav}>
+          <View style={styles.navItem}>
+            <View style={styles.activeIndicator}>
+              <MaterialIcons name="content-cut" size={22} color="#000" />
+            </View>
+            <Text style={styles.navLabelActive}>Atelier</Text>
+          </View>
 
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.replace("/(tabs)/explore")}
-        >
-          <MaterialIcons name="dry-cleaning" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Services</Text>
-        </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)/services-list")}
+          >
+            <MaterialIcons name="grid-view" size={24} color="#555" />
+            <Text style={styles.navLabel}>Servicios</Text>
+          </Pressable>
 
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/bookings")}
-        >
-          <MaterialIcons name="event-available" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Bookings</Text>
-        </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/bookings")}
+          >
+            <MaterialIcons name="event-note" size={24} color="#555" />
+            <Text style={styles.navLabel}>Turnos</Text>
+          </Pressable>
 
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/profile")}
-        >
-          <MaterialIcons name="person" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Profile</Text>
-        </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
+            <MaterialIcons name="person-outline" size={24} color="#555" />
+            <Text style={styles.navLabel}>Perfil</Text>
+          </Pressable>
+        </BlurView>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
   header: {
-    height: 66,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  welcomeText: {
+    color: "#666",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   brandTitle: {
-    color: "#d4af37",
-    fontSize: 21,
-    letterSpacing: 3,
+    color: "#FFF",
+    fontSize: 20,
     fontWeight: "800",
+    letterSpacing: 1,
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#d4af37",
+  gold: { color: "#D4AF37" },
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    borderColor: "#D4AF37",
+    padding: 2,
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 130,
-  },
-  toggleWrap: {
+  avatar: { width: "100%", height: "100%", borderRadius: 20 },
+  avatarFallback: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+    backgroundColor: "#161616",
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 14,
+    justifyContent: "center",
   },
+  avatarFallbackText: { color: "#D4AF37", fontSize: 14, fontWeight: "800" },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 150 },
+
+  toggleWrap: { alignItems: "center", marginVertical: 20 },
   toggleContainer: {
     flexDirection: "row",
-    backgroundColor: "#2a2a2a",
-    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 25,
     padding: 4,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-  },
-  toggleInactive: {
-    paddingHorizontal: 24,
-    paddingVertical: 9,
-    borderRadius: 999,
-  },
-  toggleInactiveText: {
-    color: "#d0c5af",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  toggleActive: {
-    paddingHorizontal: 24,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: "#f2ca50",
-  },
-  toggleActiveText: {
-    color: "#3c2f00",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  searchWrap: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: "#0e0e0e",
-    borderBottomWidth: 2,
-    borderBottomColor: "rgba(153, 144, 124, 0.35)",
-    justifyContent: "center",
-    paddingLeft: 44,
-    paddingRight: 12,
-    marginBottom: 18,
-  },
-  searchIcon: {
-    position: "absolute",
-    left: 14,
-    top: 16,
-  },
-  searchInput: {
-    color: "#e5e2e1",
-    fontSize: 15,
-    paddingVertical: 10,
-  },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: "#e5e2e1",
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: "800",
-  },
-  subtitle: {
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  listWrap: {
-    gap: 12,
-  },
-  card: {
-    position: "relative",
-    minHeight: 100,
-    borderRadius: 16,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.2)",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    borderColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
-  favoriteButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(14,14,14,0.72)",
+  toggleInactive: { paddingHorizontal: 24, paddingVertical: 8 },
+  toggleInactiveText: { color: "#666", fontWeight: "700", fontSize: 13 },
+  toggleActive: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    backgroundColor: "#D4AF37",
+    borderRadius: 20,
+  },
+  toggleActiveText: { color: "#000", fontWeight: "800", fontSize: 13 },
+
+  searchContainer: { marginBottom: 25 },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#161616",
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    height: 54,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  searchInput: { flex: 1, color: "#FFF", marginLeft: 10, fontSize: 15 },
+
+  sectionTitle: {
+    color: "#FFF",
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 20,
+    letterSpacing: -0.5,
+  },
+
+  listWrap: { gap: 16 },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#111",
+    borderRadius: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#1A1A1A",
+    alignItems: "center",
+  },
+  cardImage: { width: 85, height: 85, borderRadius: 16 },
+  cardImageFallback: {
+    width: 85,
+    height: 85,
+    borderRadius: 16,
+    backgroundColor: "#161616",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2,
   },
-  cardAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "#f2ca50",
+  cardInfo: { flex: 1, marginLeft: 15 },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  cardImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardTitle: {
-    color: "#e5e2e1",
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "700",
-  },
-  cardAddress: {
-    marginTop: 2,
-    color: "rgba(208, 197, 175, 0.72)",
-    fontSize: 12,
-  },
-  metaRow: {
-    marginTop: 8,
+  cardName: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  favBtn: { padding: 5 },
+  cardAddress: { color: "#666", fontSize: 13, marginTop: 2 },
+  cardMeta: { flexDirection: "row", marginTop: 12, gap: 10 },
+  metaBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  metaGroup: {
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     gap: 4,
   },
-  metaText: {
-    color: "#d0c5af",
-    fontSize: 12,
+  metaText: { color: "#FFF", fontSize: 11, fontWeight: "700" },
+  metaBadgeOwned: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D4AF37",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  metaMuted: {
-    color: "rgba(208, 197, 175, 0.52)",
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 99,
-    backgroundColor: "#4d4635",
-  },
+  metaTextOwned: { color: "#000", fontSize: 11, fontWeight: "800" },
+
   emptyStateCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    backgroundColor: "#1c1b1b",
-    paddingVertical: 18,
-    paddingHorizontal: 14,
     alignItems: "center",
-    gap: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#222",
+    backgroundColor: "#111",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
-  emptyStateTitle: {
-    color: "#e5e2e1",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  emptyStateText: {
-    color: "#d0c5af",
-    fontSize: 12,
+  emptyState: { alignItems: "center", marginTop: 40 },
+  emptyText: { color: "#444", marginTop: 10, textAlign: "center" },
+
+  navContainer: {
+    position: "absolute",
+    bottom: 35,
+    left: 20,
+    right: 20,
+    zIndex: 100,
   },
   bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(19, 19, 19, 0.94)",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 28,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    paddingVertical: 12,
+    borderRadius: 35,
+    overflow: "hidden",
+    backgroundColor: "rgba(20, 20, 20, 0.7)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  navItem: {
-    minWidth: 76,
-    borderRadius: 12,
-    alignItems: "center",
+  navItem: { alignItems: "center", minWidth: 65 },
+  activeIndicator: {
+    backgroundColor: "#D4AF37",
+    width: 48,
+    height: 32,
+    borderRadius: 16,
     justifyContent: "center",
-    paddingVertical: 8,
+    alignItems: "center",
+    marginBottom: 4,
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
-  navItemActive: {
-    backgroundColor: "#2a2a2a",
-  },
-  navText: {
-    marginTop: 4,
-    color: "#7f7766",
+  navLabel: { color: "#666", fontSize: 10, fontWeight: "600", marginTop: 2 },
+  navLabelActive: {
+    color: "#D4AF37",
     fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "500",
-  },
-  navTextActive: {
-    marginTop: 4,
-    color: "#d4af37",
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "700",
+    fontWeight: "800",
+    marginTop: 2,
   },
 });

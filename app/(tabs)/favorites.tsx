@@ -1,8 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState, useCallback } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View, SafeAreaView } from "react-native";
 
 import {
     getFavoriteBarbers,
@@ -14,449 +14,260 @@ import {
 } from "@/lib/favorites";
 
 export default function FavoritesScreen() {
-  const [activeTab, setActiveTab] = useState<"barberias" | "barberos">(
-    "barberias",
-  );
-  const [favoriteShops, setFavoriteShops] = useState<FavoriteShop[]>([]);
-  const [favoriteBarbers, setFavoriteBarbers] = useState<FavoriteBarber[]>([]);
+    const [activeTab, setActiveTab] = useState<"barberias" | "barberos">("barberias");
+    const [favoriteShops, setFavoriteShops] = useState<FavoriteShop[]>([]);
+    const [favoriteBarbers, setFavoriteBarbers] = useState<FavoriteBarber[]>([]);
 
-  useFocusEffect(() => {
-    let isMounted = true;
+    useFocusEffect(
+        useCallback(() => {
+            let isMounted = true;
+            const loadFavorites = async () => {
+                const [shops, barbers] = await Promise.all([
+                    getFavoriteShops(),
+                    getFavoriteBarbers(),
+                ]);
+                if (isMounted) {
+                    setFavoriteShops(shops);
+                    setFavoriteBarbers(barbers);
+                }
+            };
+            loadFavorites();
+            return () => { isMounted = false; };
+        }, [])
+    );
 
-    const loadFavorites = async () => {
-      const [shops, barbers] = await Promise.all([
-        getFavoriteShops(),
-        getFavoriteBarbers(),
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      setFavoriteShops(shops);
-      setFavoriteBarbers(barbers);
+    const handleRemoveShop = async (shopId: string) => {
+        const nextFavorites = await removeFavoriteShop(shopId);
+        setFavoriteShops(nextFavorites);
     };
 
-    void loadFavorites();
-
-    return () => {
-      isMounted = false;
+    const handleRemoveBarber = async (barberId: string) => {
+        const nextFavorites = await removeFavoriteBarber(barberId);
+        setFavoriteBarbers(nextFavorites);
     };
-  });
 
-  const handleRemoveShop = (shopId: string) => {
-    void removeFavoriteShop(shopId).then((nextFavorites) => {
-      setFavoriteShops(nextFavorites);
-    });
-  };
+    return (
+        <SafeAreaView style={styles.screen}>
+            {/* HEADER PREMIUM */}
+            <View style={styles.header}>
+                <Pressable style={styles.backButton} onPress={() => router.back()}>
+                    <MaterialIcons name="keyboard-backspace" size={26} color="#d4af37" />
+                </Pressable>
+                <Text style={styles.headerTitle}>Mis Favoritos</Text>
+                <View style={styles.headerSpacer} />
+            </View>
 
-  const handleRemoveBarber = (barberId: string) => {
-    void removeFavoriteBarber(barberId).then((nextFavorites) => {
-      setFavoriteBarbers(nextFavorites);
-    });
-  };
-
-  return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Mis Favoritos</Text>
-        </View>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.tabWrap}>
-          <Pressable
-            style={
-              activeTab === "barberias" ? styles.tabActive : styles.tabInactive
-            }
-            onPress={() => setActiveTab("barberias")}
-          >
-            <Text
-              style={
-                activeTab === "barberias"
-                  ? styles.tabActiveText
-                  : styles.tabInactiveText
-              }
-            >
-              Barberias
-            </Text>
-          </Pressable>
-          <Pressable
-            style={
-              activeTab === "barberos" ? styles.tabActive : styles.tabInactive
-            }
-            onPress={() => setActiveTab("barberos")}
-          >
-            <Text
-              style={
-                activeTab === "barberos"
-                  ? styles.tabActiveText
-                  : styles.tabInactiveText
-              }
-            >
-              Barberos
-            </Text>
-          </Pressable>
-        </View>
-
-        {activeTab === "barberias" ? (
-          favoriteShops.length ? (
-            <View style={styles.cardsWrap}>
-              {favoriteShops.map((shop) => (
-                <View key={shop.id} style={styles.shopCard}>
-                  <View style={styles.shopImageWrap}>
-                    <Image
-                      source={{
-                        uri: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=1200&auto=format&fit=crop",
-                      }}
-                      style={styles.shopImage}
-                      contentFit="cover"
-                    />
+            {/* TAB SELECTOR */}
+            <View style={styles.tabContainer}>
+                <View style={styles.tabTrack}>
                     <Pressable
-                      style={styles.overlayFavoriteButton}
-                      onPress={() => handleRemoveShop(shop.id)}
+                        style={[styles.tab, activeTab === "barberias" && styles.tabActive]}
+                        onPress={() => setActiveTab("barberias")}
                     >
-                      <MaterialIcons
-                        name="favorite"
-                        size={20}
-                        color="#f2ca50"
-                      />
+                        <Text style={[styles.tabText, activeTab === "barberias" && styles.tabTextActive]}>
+                            Barberías
+                        </Text>
                     </Pressable>
-                  </View>
-
-                  <View style={styles.shopBody}>
-                    <View style={styles.shopTopRow}>
-                      <Text style={styles.shopTitle}>{shop.name}</Text>
-                      <View style={styles.ratingRow}>
-                        <MaterialIcons name="star" size={13} color="#f2ca50" />
-                        <Text style={styles.ratingText}>4.8</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.locationRow}>
-                      <MaterialIcons
-                        name="location-on"
-                        size={14}
-                        color="#d0c5af"
-                      />
-                      <Text style={styles.shopAddress}>{shop.address}</Text>
-                    </View>
-
                     <Pressable
-                      style={styles.primaryButton}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/(tabs)/booking-service",
-                          params: {
-                            shopId: shop.id,
-                            shopName: shop.name,
-                          },
-                        })
-                      }
+                        style={[styles.tab, activeTab === "barberos" && styles.tabActive]}
+                        onPress={() => setActiveTab("barberos")}
                     >
-                      <Text style={styles.primaryButtonText}>
-                        Ver servicios
-                      </Text>
+                        <Text style={[styles.tabText, activeTab === "barberos" && styles.tabTextActive]}>
+                            Maestros
+                        </Text>
                     </Pressable>
-                  </View>
                 </View>
-              ))}
             </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="favorite-border" size={34} color="#99907c" />
-              <Text style={styles.emptyText}>
-                No tienes barberias favoritas.
-              </Text>
-            </View>
-          )
-        ) : favoriteBarbers.length ? (
-          <View style={styles.barbersSection}>
-            <Text style={styles.barbersSectionTitle}>
-              Tus Maestros Favoritos
-            </Text>
-            <View style={styles.barberList}>
-              {favoriteBarbers.map((barber) => (
-                <View key={barber.id} style={styles.barberCard}>
-                  <Image
-                    source={{ uri: barber.image }}
-                    style={styles.barberAvatar}
-                    contentFit="cover"
-                  />
 
-                  <View style={styles.barberBody}>
-                    <Text style={styles.barberName}>{barber.name}</Text>
-                    <Text style={styles.barberRole}>{barber.role}</Text>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {activeTab === "barberias" ? (
+                    favoriteShops.length > 0 ? (
+                        <View style={styles.cardsWrap}>
+                            {favoriteShops.map((shop) => (
+                                <View key={shop.id} style={styles.shopCard}>
+                                    <View style={styles.shopImageWrap}>
+                                        <Image
+                                            source={{ uri: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=800&auto=format&fit=crop" }}
+                                            style={styles.shopImage}
+                                            contentFit="cover"
+                                        />
+                                        <Pressable
+                                            style={styles.floatingFavButton}
+                                            onPress={() => handleRemoveShop(shop.id)}
+                                        >
+                                            <MaterialIcons name="favorite" size={20} color="#d4af37" />
+                                        </Pressable>
+                                    </View>
 
-                    <Pressable
-                      style={styles.reserveLink}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/(tabs)/barber-profile",
-                          params: {
-                            barberId: barber.id,
-                            barberName: barber.name,
-                            barberRole: barber.role,
-                            barberBranch: barber.branch,
-                            barberImage: barber.image,
-                            shopId: barber.shopId ?? "shop-1",
-                            shopName: barber.branch,
-                          },
-                        })
-                      }
-                    >
-                      <Text style={styles.reserveLinkText}>Reservar</Text>
-                    </Pressable>
-                  </View>
+                                    <View style={styles.shopBody}>
+                                        <View style={styles.shopInfoRow}>
+                                            <Text style={styles.shopTitle} numberOfLines={1}>{shop.name}</Text>
+                                            <View style={styles.ratingBadge}>
+                                                <MaterialIcons name="star" size={14} color="#000" />
+                                                <Text style={styles.ratingText}>4.8</Text>
+                                            </View>
+                                        </View>
 
-                  <Pressable
-                    style={styles.overlayFavoriteButton}
-                    onPress={() => handleRemoveBarber(barber.id)}
-                  >
-                    <MaterialIcons name="favorite" size={20} color="#f2ca50" />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <MaterialIcons name="favorite-border" size={34} color="#99907c" />
-            <Text style={styles.emptyText}>No tienes barberos favoritos.</Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
+                                        <View style={styles.locationRow}>
+                                            <MaterialIcons name="location-pin" size={14} color="#888" />
+                                            <Text style={styles.shopAddress} numberOfLines={1}>{shop.address}</Text>
+                                        </View>
+
+                                        <Pressable
+                                            style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.8 }]}
+                                            onPress={() => router.push({
+                                                pathname: "/(tabs)/booking-service",
+                                                params: { shopId: shop.id, shopName: shop.name },
+                                            })}
+                                        >
+                                            <Text style={styles.primaryButtonText}>Agendar Cita</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <EmptyState message="No tienes barberías favoritas todavía." />
+                    )
+                ) : favoriteBarbers.length > 0 ? (
+                    <View style={styles.barberList}>
+                        {favoriteBarbers.map((barber) => (
+                            <View key={barber.id} style={styles.barberCard}>
+                                <Image source={{ uri: barber.image }} style={styles.barberAvatar} />
+                                <View style={styles.barberInfo}>
+                                    <Text style={styles.barberName}>{barber.name}</Text>
+                                    <Text style={styles.barberRole}>{barber.role} • {barber.branch}</Text>
+                                    <Pressable 
+                                        style={styles.barberAction}
+                                        onPress={() => router.push({
+                                            pathname: "/(tabs)/barber-profile",
+                                            params: { ...barber, shopId: barber.shopId ?? "shop-1" }
+                                        })}
+                                    >
+                                        <Text style={styles.barberActionText}>Ver Perfil</Text>
+                                        <MaterialIcons name="chevron-right" size={16} color="#d4af37" />
+                                    </Pressable>
+                                </View>
+                                <Pressable 
+                                    style={styles.barberFavIcon}
+                                    onPress={() => handleRemoveBarber(barber.id)}
+                                >
+                                    <MaterialIcons name="favorite" size={22} color="#d4af37" />
+                                </Pressable>
+                            </View>
+                        ))}
+                    </View>
+                ) : (
+                    <EmptyState message="Tu lista de maestros está vacía." />
+                )}
+            </ScrollView>
+        </SafeAreaView>
+    );
 }
 
+const EmptyState = ({ message }: { message: string }) => (
+    <View style={styles.emptyContainer}>
+        <View style={styles.emptyIconCircle}>
+            <MaterialIcons name="auto-fix-off" size={40} color="#333" />
+        </View>
+        <Text style={styles.emptyText}>{message}</Text>
+    </View>
+);
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
-  header: {
-    height: 72,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(19, 19, 19, 0.92)",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: "#d4af37",
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 30,
-    gap: 16,
-  },
-  tabWrap: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(77, 70, 53, 0.2)",
-  },
-  tabActive: {
-    paddingBottom: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: "#d4af37",
-    marginRight: 24,
-  },
-  tabInactive: {
-    paddingBottom: 10,
-    marginRight: 24,
-  },
-  tabActiveText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  tabInactiveText: {
-    color: "#7f7766",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  cardsWrap: {
-    gap: 12,
-  },
-  shopCard: {
-    borderRadius: 14,
-    overflow: "hidden",
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-  },
-  shopImageWrap: {
-    height: 140,
-    position: "relative",
-  },
-  shopImage: {
-    width: "100%",
-    height: "100%",
-  },
-  overlayFavoriteButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(19,19,19,0.62)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shopBody: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  shopTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  shopTitle: {
-    color: "#e5e2e1",
-    fontSize: 18,
-    fontWeight: "800",
-    flex: 1,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  ratingText: {
-    color: "#f2ca50",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  shopAddress: {
-    color: "#d0c5af",
-    fontSize: 12,
-    flex: 1,
-  },
-  primaryButton: {
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: "#241a00",
-    fontSize: 12,
-    fontWeight: "900",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  barbersSection: {
-    gap: 10,
-  },
-  barbersSectionTitle: {
-    color: "#d0c5af",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  barberList: {
-    gap: 10,
-  },
-  barberCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    position: "relative",
-  },
-  barberAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  barberBody: {
-    flex: 1,
-  },
-  barberName: {
-    color: "#e5e2e1",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  barberRole: {
-    color: "#d0c5af",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  reserveLink: {
-    marginTop: 6,
-    alignSelf: "flex-start",
-  },
-  reserveLinkText: {
-    color: "#f2ca50",
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  emptyState: {
-    minHeight: 150,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    backgroundColor: "#0e0e0e",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  emptyText: {
-    color: "#d0c5af",
-    fontSize: 13,
-  },
+    screen: { flex: 1, backgroundColor: "#0A0A0A" },
+    header: {
+        height: 60,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        justifyContent: "space-between",
+    },
+    backButton: { width: 40, height: 40, justifyContent: "center" },
+    headerTitle: { color: "#FFF", fontSize: 18, fontWeight: "900", letterSpacing: 1 },
+    headerSpacer: { width: 40 },
+    
+    tabContainer: { paddingHorizontal: 20, marginVertical: 15 },
+    tabTrack: {
+        flexDirection: "row",
+        backgroundColor: "#1A1A1A",
+        borderRadius: 12,
+        padding: 4,
+    },
+    tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
+    tabActive: { backgroundColor: "#d4af37" },
+    tabText: { color: "#888", fontWeight: "700", fontSize: 13 },
+    tabTextActive: { color: "#000" },
+
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+    
+    cardsWrap: { gap: 20 },
+    shopCard: {
+        backgroundColor: "#151515",
+        borderRadius: 20,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#222",
+    },
+    shopImageWrap: { height: 160, width: "100%" },
+    shopImage: { width: "100%", height: "100%" },
+    floatingFavButton: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        padding: 8,
+        borderRadius: 12,
+    },
+    shopBody: { padding: 16, gap: 8 },
+    shopInfoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    shopTitle: { color: "#FFF", fontSize: 20, fontWeight: "800", flex: 1 },
+    ratingBadge: {
+        flexDirection: "row",
+        backgroundColor: "#d4af37",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignItems: "center",
+        gap: 4,
+    },
+    ratingText: { color: "#000", fontWeight: "900", fontSize: 12 },
+    locationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    shopAddress: { color: "#888", fontSize: 13 },
+    primaryButton: {
+        backgroundColor: "#FFF",
+        height: 48,
+        borderRadius: 12,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 8,
+    },
+    primaryButtonText: { color: "#000", fontWeight: "900", fontSize: 14, textTransform: "uppercase" },
+
+    barberList: { gap: 12 },
+    barberCard: {
+        flexDirection: "row",
+        backgroundColor: "#151515",
+        padding: 12,
+        borderRadius: 18,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#222",
+    },
+    barberAvatar: { width: 65, height: 65, borderRadius: 15, borderWidth: 1, borderColor: "#333" },
+    barberInfo: { flex: 1, marginLeft: 16, gap: 2 },
+    barberName: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    barberRole: { color: "#666", fontSize: 12 },
+    barberAction: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+    barberActionText: { color: "#d4af37", fontWeight: "700", fontSize: 12 },
+    barberFavIcon: { padding: 8 },
+
+    emptyContainer: { alignItems: "center", justifyContent: "center", marginTop: 100 },
+    emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#111", justifyContent: "center", alignItems: "center", marginBottom: 16 },
+    emptyText: { color: "#444", fontSize: 15, textAlign: "center", paddingHorizontal: 40 },
 });

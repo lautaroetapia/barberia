@@ -1,53 +1,69 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, Dimensions } from "react-native";
+import { LinearGradient } from "expo-linear-gradient"; // Recomendado instalar expo-linear-gradient
 
-const IMAGE_URI =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBRsOLICSFsLDyllxHTFzHt7aeK7hnAMWm6C191AQVPUe1bwmPZZj-4IvREHGl_cvi6IbdndPoPtdRa5r_mLgHr23BCSHLVWC24CMfoYiEDtGDfxXaPEKaItT3DeI0zwzclLdVAuP5U0i_NbvcG6-9oSA37m7ynRNlz7F64wHcuJmD3ohpa8Fks4afQHHbPz1Sq_163J8iODiCiHI_HpDhi5oNQV6rUpfYZtzDJlYsgN4XyqRTFkowghZJzieQGaD6UgU4szHLLd_xu";
+const { width } = Dimensions.get("window");
+const IMAGE_URI = "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=1000&auto=format&fit=crop"; // Imagen de ejemplo de barbería
 
 export default function StepOneScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
+      {/* Contenedor de Imagen con Gradiente Superior */}
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: IMAGE_URI }}
+          style={styles.image}
+          contentFit="cover"
+          transition={1000}
+        />
+        <LinearGradient
+          colors={["transparent", "rgba(10,10,10,0.8)", "#0A0A0A"]}
+          style={styles.imageOverlay}
+        />
+      </View>
+
       <View style={styles.content}>
-        <View style={styles.imageFrame}>
-          <Image
-            source={{ uri: IMAGE_URI }}
-            style={styles.image}
-            contentFit="cover"
-          />
-          <View style={styles.imageFade} />
+        {/* Indicadores de Progreso Superiores */}
+        <View style={styles.progressRow}>
+          <View style={[styles.progressStep, styles.progressActive]} />
+          <View style={styles.progressStep} />
+          <View style={styles.progressStep} />
         </View>
 
         <View style={styles.copy}>
-          <Text style={styles.title}>Tu corte, a tu ritmo</Text>
+          <Text style={styles.title}>
+            Tu corte,{"\n"}
+            <Text style={styles.titleHighlight}>a tu ritmo</Text>
+          </Text>
           <Text style={styles.description}>
-            Reservá en segundos, sin esperas.
+            Reservá tu turno en segundos con los mejores profesionales, sin esperas ni llamadas.
           </Text>
         </View>
 
-        <View style={styles.progressRow}>
-          <View style={styles.progressActive} />
-          <View style={styles.progressDot} />
-          <View style={styles.progressDot} />
+        <View style={styles.footer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+            ]}
+            onPress={() => router.push("/onboarding/step-2")}
+          >
+            <Text style={styles.primaryButtonText}>Siguiente</Text>
+          </Pressable>
+
+          <Pressable 
+            style={styles.secondaryPressable}
+            onPress={() => router.push("/auth/login")}
+          >
+            <Text style={styles.secondaryText}>
+              ¿Ya tenés cuenta? <Text style={styles.loginLink}>Iniciar sesión</Text>
+            </Text>
+          </Pressable>
         </View>
-      </View>
-
-      <View style={styles.footer}>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.push("/onboarding/step-2")}
-        >
-          <Text style={styles.primaryButtonText}>Siguiente</Text>
-        </Pressable>
-
-        <Pressable onPress={() => router.push("/auth/login")}>
-          <Text style={styles.secondaryLink}>
-            ¿Ya tenés cuenta? Iniciar sesión
-          </Text>
-        </Pressable>
       </View>
     </View>
   );
@@ -56,109 +72,101 @@ export default function StepOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#131313",
-    justifyContent: "space-between",
+    backgroundColor: "#0A0A0A",
   },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 48,
-    paddingHorizontal: 24,
-  },
-  imageFrame: {
+  imageContainer: {
+    height: "55%",
     width: "100%",
-    aspectRatio: 0.8,
-    borderRadius: 20,
-    overflow: "hidden",
-    marginBottom: 40,
-    backgroundColor: "#1c1b1b",
-    shadowColor: "#000",
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 12,
+    position: "absolute",
+    top: 0,
   },
   image: {
     width: "100%",
     height: "100%",
   },
-  imageFade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(19, 19, 19, 0.04)",
+  imageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "60%",
   },
-  copy: {
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 12,
-  },
-  title: {
-    color: "#e5e2e1",
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "800",
-    letterSpacing: -0.6,
-    textAlign: "center",
-  },
-  description: {
-    color: "#d0c5af",
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
-    maxWidth: 280,
+  content: {
+    flex: 1,
+    marginTop: "50%", // Empuja el contenido para que empiece donde termina el fade
+    paddingHorizontal: 32,
+    justifyContent: "space-between",
+    paddingBottom: 50,
   },
   progressRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 32,
+    gap: 8,
+    marginBottom: 40,
+  },
+  progressStep: {
+    height: 4,
+    flex: 1,
+    borderRadius: 2,
+    backgroundColor: "rgba(212, 175, 55, 0.2)",
   },
   progressActive: {
-    width: 32,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#f2ca50",
-    shadowColor: "#f2ca50",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    backgroundColor: "#D4AF37",
+    width: width * 0.1, // Un poco más largo el activo
+    flex: 1.5,
   },
-  progressDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#2a2a2a",
+  copy: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 40,
+    fontWeight: "900",
+    lineHeight: 46,
+    letterSpacing: -1,
+  },
+  titleHighlight: {
+    color: "#D4AF37",
+  },
+  description: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 17,
+    lineHeight: 26,
+    marginTop: 16,
+    fontWeight: "400",
   },
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    paddingTop: 12,
-    gap: 22,
-    backgroundColor: "rgba(19, 19, 19, 0.94)",
+    gap: 20,
+    width: "100%",
   },
   primaryButton: {
-    minHeight: 56,
-    borderRadius: 16,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#D4AF37",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#d4af37",
-    shadowColor: "#d4af37",
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
+    shadowColor: "#D4AF37",
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   primaryButtonText: {
-    color: "#3c2f00",
+    color: "#241a00",
     fontSize: 18,
-    lineHeight: 22,
     fontWeight: "800",
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
   },
-  secondaryLink: {
-    color: "#d0c5af",
-    textAlign: "center",
+  secondaryPressable: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  secondaryText: {
+    color: "rgba(255, 255, 255, 0.5)",
     fontSize: 14,
-    lineHeight: 20,
-    textDecorationLine: "underline",
-    textDecorationColor: "#4d4635",
+  },
+  loginLink: {
+    color: "#D4AF37",
+    fontWeight: "700",
   },
 });

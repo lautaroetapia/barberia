@@ -130,3 +130,58 @@ export const getUserAvatarUri = (user: User | null, fallbackUri: string) => {
 
   return fallbackUri;
 };
+
+const guessExtensionFromType = (contentType: string) => {
+  if (contentType.includes("png")) return "png";
+  if (contentType.includes("webp")) return "webp";
+  if (contentType.includes("gif")) return "gif";
+  return "jpg";
+};
+
+const isRemoteUrl = (value: string) => /^https?:\/\//i.test(value);
+
+export const uploadUserAvatar = async (
+  user: User,
+  imageUri: string,
+) => {
+  const trimmedUri = imageUri.trim();
+  if (!trimmedUri || isRemoteUrl(trimmedUri)) {
+    return trimmedUri;
+  }
+
+  const response = await fetch(trimmedUri);
+  if (!response.ok) {
+    throw new Error("No se pudo leer la imagen seleccionada.");
+  }
+
+  const contentType = response.headers.get("content-type") ?? "image/jpeg";
+  const fileExtension = guessExtensionFromType(contentType);
+  const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${fileExtension}`;
+  const fileBuffer = await response.arrayBuffer();
+
+  const { supabase } = await import("@/lib/supabase");
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(filePath, fileBuffer, {
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(filePath);
+
+  const publicUrl = data.publicUrl;
+
+  await Promise.all([
+    supabase.auth.updateUser({ data: { avatar_url: publicUrl } }),
+    supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id)
+  ]);
+
+  return publicUrl;
+};

@@ -1,10 +1,10 @@
 import { AntDesign, MaterialIcons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -15,498 +15,256 @@ import {
     View,
 } from "react-native";
 
-import { AppToast } from "@/components/ui/app-toast";
-import { isSupabaseConfigured, supabase } from "../../lib/supabase";
-import { signInWithGoogle } from "../../lib/supabase-google-auth";
-
-const POST_SIGNUP_WELCOME_KEY = "post_signup_welcome_email";
+import { signInWithGoogle } from "@/lib/supabase-google-auth";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export default function RegisterScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [registerError, setRegisterError] = useState("");
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({ visible: false, message: "", type: "info" });
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+    const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+    const [focusedInput, setFocusedInput] = useState<"email" | "pass" | null>(null);
 
-  const passwordScore = useMemo(() => {
-    if (password.length === 0) return 0;
-    if (password.length < 6) return 1;
-    if (password.length < 9) return 2;
-    if (!/[A-Z]/.test(password) || !/\d/.test(password)) return 3;
-    return 4;
-  }, [password]);
+    const passwordScore = useMemo(() => {
+        if (password.length === 0) return 0;
+        if (password.length < 6) return 1;
+        if (password.length < 9) return 2;
+        if (!/[A-Z]/.test(password) || !/\d/.test(password)) return 3;
+        return 4;
+    }, [password]);
 
-  const passwordLabel = ["", "Debil", "Media", "Fuerte", "Muy fuerte"][
-    passwordScore
-  ];
+    const strengthColors = ["#353535", "#FF6B6B", "#F2CA50", "#D4AF37", "#00C851"];
+    const passwordLabel = ["", "DÉBIL", "MEDIA", "FUERTE", "EXCELENTE"][passwordScore];
 
-  const handleCreateAccount = async () => {
-    if (!isSupabaseConfigured) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Falta configurar Supabase para registrar usuarios.",
-      });
-      return;
-    }
+    const handleCreateAccount = async () => {
+        if (isCreatingAccount) {
+            return;
+        }
 
-    if (!email.trim() || !password) {
-      setRegisterError("Completa correo y contrasena.");
-      return;
-    }
+        if (!isSupabaseConfigured) {
+            Alert.alert("Configuración pendiente", "Supabase no está configurado en este entorno.");
+            return;
+        }
 
-    if (!acceptedTerms) {
-      setRegisterError("Debes aceptar terminos y condiciones.");
-      return;
-    }
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
+            Alert.alert("Correo inválido", "Ingresa un correo electrónico válido.");
+            return;
+        }
 
-    setRegisterError("");
-    setIsCreatingAccount(true);
+        if (password.length < 6) {
+            Alert.alert("Contraseña débil", "La contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
 
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        emailRedirectTo: "barberia://auth/login",
-      },
-    });
+        if (!acceptedTerms) {
+            Alert.alert("Términos y privacidad", "Debes aceptar términos y privacidad para continuar.");
+            return;
+        }
 
-    setIsCreatingAccount(false);
+        setIsCreatingAccount(true);
+        try {
+            const { error } = await supabase.auth.signUp({
+                email: trimmedEmail,
+                password,
+            });
 
-    if (error) {
-      setRegisterError(error.message);
-      return;
-    }
+            if (error) {
+                Alert.alert("No se pudo crear la cuenta", error.message);
+                return;
+            }
 
-    await AsyncStorage.setItem(
-      POST_SIGNUP_WELCOME_KEY,
-      email.trim().toLowerCase(),
+            router.push("/auth/verify-email");
+        } finally {
+            setIsCreatingAccount(false);
+        }
+    };
+
+    const handleGoogleSignUp = async () => {
+        if (isGoogleSigningIn) {
+            return;
+        }
+
+        setIsGoogleSigningIn(true);
+        try {
+            const result = await signInWithGoogle();
+            if (!result.ok) {
+                Alert.alert("No se pudo continuar con Google", result.message);
+            }
+        } catch {
+            Alert.alert("Error", "No se pudo continuar con Google. Inténtalo de nuevo.");
+        } finally {
+            setIsGoogleSigningIn(false);
+        }
+    };
+
+    return (
+        <KeyboardAvoidingView
+            style={styles.screen}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+            <StatusBar style="light" />
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* BRANDING */}
+                <View style={styles.header}>
+                    <View style={styles.logoCircle}>
+                        <MaterialIcons name="content-cut" size={32} color="#D4AF37" />
+                    </View>
+                    <Text style={styles.brandTitle}>NAVAJA <Text style={styles.brandTitleBold}>DORADA</Text></Text>
+                </View>
+
+                {/* TABS */}
+                <View style={styles.tabsRow}>
+                    <Pressable style={styles.tabButton} onPress={() => router.push("/auth/login")}>
+                        <Text style={styles.tabTextInactive}>Ingresar</Text>
+                    </Pressable>
+                    <View style={styles.tabButton}>
+                        <Text style={styles.tabTextActive}>Registrarse</Text>
+                        <View style={styles.tabIndicator} />
+                    </View>
+                </View>
+
+                <View style={styles.formCard}>
+                    {/* EMAIL */}
+                    <View style={styles.fieldBlock}>
+                        <Text style={styles.fieldLabel}>CORREO ELECTRÓNICO</Text>
+                        <View style={[styles.inputContainer, focusedInput === 'email' && styles.inputFocused]}>
+                            <MaterialIcons name="mail-outline" size={20} color={focusedInput === 'email' ? "#D4AF37" : "#666"} />
+                            <TextInput
+                                value={email}
+                                onChangeText={setEmail}
+                                onFocus={() => setFocusedInput('email')}
+                                onBlur={() => setFocusedInput(null)}
+                                style={styles.textInput}
+                                placeholder="tu@email.com"
+                                placeholderTextColor="#444"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+                        </View>
+                    </View>
+
+                    {/* PASSWORD */}
+                    <View style={styles.fieldBlock}>
+                        <Text style={styles.fieldLabel}>CONTRASEÑA</Text>
+                        <View style={[styles.inputContainer, focusedInput === 'pass' && styles.inputFocused]}>
+                            <MaterialIcons name="lock-outline" size={20} color={focusedInput === 'pass' ? "#D4AF37" : "#666"} />
+                            <TextInput
+                                value={password}
+                                onChangeText={setPassword}
+                                onFocus={() => setFocusedInput('pass')}
+                                onBlur={() => setFocusedInput(null)}
+                                style={styles.textInput}
+                                placeholder="********"
+                                placeholderTextColor="#444"
+                                secureTextEntry={!showPassword}
+                            />
+                            <Pressable onPress={() => setShowPassword(!showPassword)}>
+                                <MaterialIcons name={showPassword ? "visibility" : "visibility-off"} size={20} color="#666" />
+                            </Pressable>
+                        </View>
+
+                        {/* STRENGTH BAR */}
+                        <View style={styles.strengthWrapper}>
+                            <View style={styles.strengthBarRow}>
+                                {[1, 2, 3, 4].map((step) => (
+                                    <View
+                                        key={step}
+                                        style={[
+                                            styles.strengthSegment,
+                                            { backgroundColor: passwordScore >= step ? strengthColors[passwordScore] : "#222" }
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                            <Text style={[styles.strengthText, { color: passwordScore > 0 ? strengthColors[passwordScore] : "#444" }]}>
+                                {passwordLabel || "SEGURIDAD"}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* TERMS */}
+                    <Pressable style={styles.termsRow} onPress={() => setAcceptedTerms(!acceptedTerms)}>
+                        <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                            {acceptedTerms && <MaterialIcons name="check" size={14} color="#1A1A1A" />}
+                        </View>
+                        <Text style={styles.termsText}>
+                            Acepto los <Text style={styles.goldText}>términos</Text> y la <Text style={styles.goldText}>privacidad</Text>.
+                        </Text>
+                    </Pressable>
+
+                    <Pressable 
+                        style={({pressed}) => [styles.primaryButton, pressed && styles.buttonPressed]}
+                        onPress={() => void handleCreateAccount()}
+                        disabled={isCreatingAccount}
+                    >
+                        {isCreatingAccount ? <ActivityIndicator color="#1A1A1A" /> : <Text style={styles.primaryButtonText}>CREAR CUENTA</Text>}
+                    </Pressable>
+
+                    <View style={styles.dividerRow}>
+                        <View style={styles.line} />
+                        <Text style={styles.dividerText}>O REGÍSTRATE CON</Text>
+                        <View style={styles.line} />
+                    </View>
+
+                    <Pressable style={styles.googleButton} onPress={() => void handleGoogleSignUp()} disabled={isGoogleSigningIn}>
+                        {isGoogleSigningIn ? <ActivityIndicator color="#FFF" /> : <><AntDesign name="google" size={18} color="#FFF" /><Text style={styles.googleButtonText}>Google</Text></>}
+                    </Pressable>
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
-
-    router.push("/auth/verify-email");
-  };
-
-  const handleGoogleAuth = async () => {
-    setRegisterError("");
-    setIsGoogleLoading(true);
-
-    const result = await signInWithGoogle();
-    setIsGoogleLoading(false);
-
-    if (!result.ok) {
-      setRegisterError(result.message);
-      return;
-    }
-
-    router.replace("/(tabs)");
-  };
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <AppToast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
-      />
-
-      <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.brandBlock}>
-          <MaterialIcons name="content-cut" size={38} color="#f2ca50" />
-          <Text style={styles.brandTitle}>NAVAJA DORADA</Text>
-        </View>
-
-        <View style={styles.tabsRow}>
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => router.push("/auth/login")}
-          >
-            <Text style={[styles.tabText, styles.tabTextInactive]}>
-              Iniciar sesion
-            </Text>
-          </Pressable>
-
-          <View style={styles.tabButton}>
-            <Text style={[styles.tabText, styles.tabTextActive]}>
-              Registrarse
-            </Text>
-            <View style={[styles.tabUnderline, styles.tabUnderlineActive]} />
-          </View>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Correo electronico</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              style={styles.textInput}
-              placeholder="tu@email.com"
-              placeholderTextColor="rgba(153, 144, 124, 0.7)"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Contrasena</Text>
-            <View style={styles.passwordWrap}>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                style={[styles.textInput, styles.passwordInput]}
-                placeholder="********"
-                placeholderTextColor="rgba(153, 144, 124, 0.7)"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <Pressable
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword((prev) => !prev)}
-              >
-                <MaterialIcons
-                  name={showPassword ? "visibility" : "visibility-off"}
-                  size={20}
-                  color="#99907c"
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.strengthBlock}>
-            <View style={styles.strengthRow}>
-              {[1, 2, 3, 4].map((step) => (
-                <View
-                  key={step}
-                  style={[
-                    styles.strengthSegment,
-                    step === 1 && styles.firstStrengthSegment,
-                    step === 4 && styles.lastStrengthSegment,
-                    passwordScore >= step
-                      ? step === 1
-                        ? styles.weakStrength
-                        : styles.activeStrength
-                      : styles.inactiveStrength,
-                  ]}
-                />
-              ))}
-            </View>
-            <Text
-              style={[
-                styles.strengthLabel,
-                passwordScore <= 1
-                  ? styles.strengthWeak
-                  : styles.strengthNeutral,
-              ]}
-            >
-              {passwordLabel || "Debil"}
-            </Text>
-          </View>
-
-          <Pressable
-            style={styles.termsRow}
-            onPress={() => setAcceptedTerms((prev) => !prev)}
-          >
-            <View
-              style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}
-            >
-              {acceptedTerms ? (
-                <MaterialIcons name="check" size={14} color="#3c2f00" />
-              ) : null}
-            </View>
-            <Text style={styles.termsText}>
-              Acepto los{" "}
-              <Text style={styles.termsLink}>terminos y condiciones</Text> y la{" "}
-              <Text style={styles.termsLink}>politica de privacidad</Text>.
-            </Text>
-          </Pressable>
-
-          <View style={styles.actionsArea}>
-            <Pressable
-              style={[
-                styles.primaryButton,
-                isCreatingAccount && styles.buttonDisabled,
-              ]}
-              onPress={handleCreateAccount}
-              disabled={isCreatingAccount}
-            >
-              {isCreatingAccount ? (
-                <ActivityIndicator color="#3c2f00" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Crear cuenta</Text>
-              )}
-            </Pressable>
-
-            {registerError ? (
-              <Text style={styles.errorText}>{registerError}</Text>
-            ) : null}
-
-            <View style={styles.dividerWrap}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>O</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Pressable
-              style={[
-                styles.googleButton,
-                isGoogleLoading && styles.buttonDisabled,
-              ]}
-              onPress={handleGoogleAuth}
-              disabled={isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator color="#e5e2e1" />
-              ) : (
-                <>
-                  <AntDesign name="google" size={18} color="#e5e2e1" />
-                  <Text style={styles.googleButtonText}>
-                    Continuar con Google
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#0b0c0f",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 26,
-    paddingBottom: 16,
-  },
-  brandBlock: {
-    alignItems: "center",
-    marginBottom: 14,
-    gap: 6,
-  },
-  brandTitle: {
-    color: "#d4af37",
-    fontSize: 23,
-    lineHeight: 28,
-    fontWeight: "800",
-    letterSpacing: 4,
-  },
-  tabsRow: {
-    flexDirection: "row",
-    marginBottom: 22,
-    borderBottomWidth: 1,
-    borderBottomColor: "#32343b",
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 12,
-    position: "relative",
-  },
-  tabText: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: "700",
-  },
-  tabTextActive: {
-    color: "#f2ca50",
-  },
-  tabTextInactive: {
-    color: "#cbc5b7",
-  },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-  },
-  tabUnderlineActive: {
-    backgroundColor: "#f2ca50",
-  },
-  form: {
-    flexGrow: 1,
-  },
-  fieldBlock: {
-    marginBottom: 18,
-  },
-  fieldLabel: {
-    color: "#99907c",
-    fontSize: 14,
-    marginBottom: 10,
-    marginLeft: 2,
-  },
-  textInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#5a513d",
-    color: "#e5e2e1",
-    fontSize: 16,
-    paddingHorizontal: 2,
-    paddingVertical: 8,
-  },
-  passwordWrap: {
-    position: "relative",
-  },
-  passwordInput: {
-    paddingRight: 34,
-  },
-  passwordToggle: {
-    position: "absolute",
-    right: 0,
-    top: 8,
-    padding: 2,
-  },
-  strengthBlock: {
-    marginTop: -2,
-    marginBottom: 14,
-    gap: 6,
-  },
-  strengthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  strengthSegment: {
-    flex: 1,
-    height: 8,
-  },
-  firstStrengthSegment: {
-    borderTopLeftRadius: 999,
-    borderBottomLeftRadius: 999,
-  },
-  lastStrengthSegment: {
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-  },
-  weakStrength: {
-    backgroundColor: "#ffb4ab",
-  },
-  activeStrength: {
-    backgroundColor: "#f2ca50",
-  },
-  inactiveStrength: {
-    backgroundColor: "#353535",
-  },
-  strengthLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  strengthWeak: {
-    color: "#ffb4ab",
-  },
-  strengthNeutral: {
-    color: "#d0c5af",
-  },
-  termsRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 14,
-  },
-  checkbox: {
-    marginTop: 2,
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#6e6449",
-    backgroundColor: "#0e0e0e",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    borderColor: "#f2ca50",
-    backgroundColor: "#f2ca50",
-  },
-  termsText: {
-    flex: 1,
-    color: "#d0c5af",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  termsLink: {
-    color: "#f2ca50",
-  },
-  actionsArea: {
-    marginTop: 20,
-    paddingBottom: 2,
-    gap: 12,
-  },
-  primaryButton: {
-    minHeight: 58,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#d4af37",
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  primaryButtonText: {
-    color: "#3c2f00",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  errorText: {
-    color: "#ffb4ab",
-    fontSize: 13,
-    marginTop: -2,
-    textAlign: "center",
-  },
-  dividerWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingVertical: 2,
-  },
-  dividerLine: {
-    flex: 1,
-    borderTopWidth: 1,
-    borderTopColor: "#353535",
-  },
-  dividerText: {
-    color: "#99907c",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  googleButton: {
-    minHeight: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: "#38393e",
-  },
-  googleButtonText: {
-    color: "#e5e2e1",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  buttonDisabled: {
-    opacity: 0.75,
-  },
+    screen: { flex: 1, backgroundColor: "#0A0A0A" },
+    scrollContent: { padding: 24, flexGrow: 1, justifyContent: "center" },
+    header: { alignItems: "center", marginBottom: 30 },
+    logoCircle: {
+        width: 64, height: 64, borderRadius: 32,
+        backgroundColor: "#161616", alignItems: "center",
+        justifyContent: "center", borderWidth: 1, borderColor: "rgba(212, 175, 55, 0.2)",
+        marginBottom: 12
+    },
+    brandTitle: { color: "#FFF", fontSize: 20, letterSpacing: 4, fontWeight: "300" },
+    brandTitleBold: { color: "#D4AF37", fontWeight: "800" },
+    tabsRow: { flexDirection: "row", marginBottom: 32, paddingHorizontal: 4 },
+    tabButton: { marginRight: 24 },
+    tabTextActive: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+    tabTextInactive: { color: "#444", fontSize: 16, fontWeight: "600" },
+    tabIndicator: { height: 3, backgroundColor: "#D4AF37", width: 16, marginTop: 4, borderRadius: 2 },
+    formCard: { backgroundColor: "#121212", borderRadius: 24, padding: 24, borderWidth: 1, borderColor: "#1F1F1F" },
+    fieldBlock: { marginBottom: 20 },
+    fieldLabel: { color: "#D4AF37", fontSize: 11, fontWeight: "700", letterSpacing: 1.5, marginBottom: 10 },
+    inputContainer: {
+        flexDirection: "row", alignItems: "center", backgroundColor: "#1A1A1A",
+        borderRadius: 12, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: "#222"
+    },
+    inputFocused: { borderColor: "#D4AF37", backgroundColor: "#1E1E1E" },
+    textInput: { flex: 1, color: "#FFF", fontSize: 15, marginLeft: 12 },
+    strengthWrapper: { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    strengthBarRow: { flexDirection: "row", gap: 4, flex: 1, marginRight: 12 },
+    strengthSegment: { height: 4, flex: 1, borderRadius: 2 },
+    strengthText: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+    termsRow: { flexDirection: "row", alignItems: "center", marginBottom: 24, gap: 12 },
+    checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: "#333", alignItems: "center", justifyContent: "center" },
+    checkboxChecked: { backgroundColor: "#D4AF37", borderColor: "#D4AF37" },
+    termsText: { color: "#666", fontSize: 13 },
+    goldText: { color: "#D4AF37", fontWeight: "600" },
+    primaryButton: { backgroundColor: "#D4AF37", height: 56, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 10 },
+    primaryButtonText: { color: "#1A1A1A", fontSize: 15, fontWeight: "900", letterSpacing: 1.5 },
+    buttonPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+    dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 24 },
+    line: { flex: 1, height: 1, backgroundColor: "#222" },
+    dividerText: { color: "#444", fontSize: 10, marginHorizontal: 12, fontWeight: "700" },
+    googleButton: {
+        flexDirection: "row", height: 56, borderRadius: 12, borderWidth: 1,
+        borderColor: "#333", alignItems: "center", justifyContent: "center", gap: 12
+    },
+    googleButtonText: { color: "#FFF", fontSize: 15, fontWeight: "600" }
 });

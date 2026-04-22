@@ -2,8 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-
+import { Pressable, ScrollView, StyleSheet, Text, View, SafeAreaView } from "react-native";
 import { getFavoriteBarbers, toggleFavoriteBarber } from "@/lib/favorites";
 
 const pickFirst = (value: string | string[] | undefined) =>
@@ -24,236 +23,224 @@ export default function ClientBarberProfileScreen() {
   const barberName = pickFirst(params.barberName) ?? "Barbero";
   const barberRole = pickFirst(params.barberRole) ?? "Especialista";
   const barberBranch = pickFirst(params.barberBranch) ?? "Atelier";
-  const barberImage =
-    pickFirst(params.barberImage) ??
-    "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=800&auto=format&fit=crop";
+  const barberImage = pickFirst(params.barberImage) ?? "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=800&auto=format&fit=crop";
   const shopId = pickFirst(params.shopId) ?? "shop-1";
   const shopName = pickFirst(params.shopName) ?? barberBranch;
+  
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-
     const loadFavoriteState = async () => {
       const favorites = await getFavoriteBarbers();
-
-      if (!isMounted) {
-        return;
+      if (isMounted) {
+        setIsFavorite(favorites.some((item) => item.id === barberId));
       }
-
-      setIsFavorite(favorites.some((item) => item.id === barberId));
     };
-
-    void loadFavoriteState();
-
-    return () => {
-      isMounted = false;
-    };
+    loadFavoriteState();
+    return () => { isMounted = false; };
   }, [barberId]);
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
+      {/* HEADER MINIMALISTA */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={22} color="#e5e2e1" />
+          <MaterialIcons name="keyboard-backspace" size={28} color="#D4AF37" />
         </Pressable>
-        <Text style={styles.headerTitle}>Perfil del barbero</Text>
-        <View style={styles.backButton} />
+        <Text style={styles.headerTitle}>Perfil Maestro</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
+      <ScrollView 
+        style={styles.scroll} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroCard}>
-          <Image
-            source={{ uri: barberImage }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
+        {/* HERO CARD PREMIUM */}
+        <View style={styles.heroContainer}>
+          <View style={styles.avatarOutline}>
+            <Image source={{ uri: barberImage }} style={styles.avatar} contentFit="cover" />
+          </View>
           <Text style={styles.name}>{barberName}</Text>
-          <Text style={styles.role}>{barberRole}</Text>
-          <Text style={styles.branch}>{barberBranch}</Text>
-
-          <View style={styles.ratingWrap}>
-            <MaterialIcons name="star" size={16} color="#f2ca50" />
-            <Text style={styles.ratingText}>4.9 · 120 reseñas</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{barberRole.toUpperCase()}</Text>
+          </View>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <MaterialIcons name="star" size={16} color="#D4AF37" />
+              <Text style={styles.statText}>4.9 (120)</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <MaterialIcons name="location-on" size={16} color="#D4AF37" />
+              <Text style={styles.statText}>{barberBranch}</Text>
+            </View>
           </View>
         </View>
 
+        {/* ESPECIALIDADES */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Especialidades</Text>
           <View style={styles.chipsWrap}>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Fade</Text>
-            </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Barba</Text>
-            </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Toalla caliente</Text>
-            </View>
+            {["Skin Fade", "Perfilado de Barba", "Hot Towel Shave"].map((spec) => (
+              <View key={spec} style={styles.chip}>
+                <Text style={styles.chipText}>{spec}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
+        {/* BIOGRAFÍA */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sobre su trabajo</Text>
+          <Text style={styles.sectionTitle}>Sobre su técnica</Text>
           <Text style={styles.bioText}>
-            Perfil detallista, enfocado en estilos modernos y acabados prolijos
-            para cada cliente.
+            Especialista en acabados de alta precisión. Con más de 8 años de experiencia, 
+            combina técnicas tradicionales con las últimas tendencias de la industria.
           </Text>
         </View>
       </ScrollView>
 
+      {/* FOOTER ACCIONES */}
       <View style={styles.footer}>
-        <Pressable
-          style={styles.favoriteButton}
-          onPress={() => {
-            void toggleFavoriteBarber({
-              id: barberId,
-              name: barberName,
-              role: barberRole,
-              branch: barberBranch,
-              image: barberImage,
-              shopId,
-            }).then((result) => setIsFavorite(result.isFavorite));
-          }}
-        >
-          <MaterialIcons
-            name={isFavorite ? "favorite" : "favorite-border"}
-            size={18}
-            color="#f2ca50"
-          />
-          <Text style={styles.favoriteButtonText}>
-            {isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-          </Text>
-        </Pressable>
+        <View style={styles.footerRow}>
+          <Pressable
+            style={[styles.favAction, isFavorite && styles.favActionActive]}
+            onPress={() => {
+              void toggleFavoriteBarber({
+                id: barberId, name: barberName, role: barberRole,
+                branch: barberBranch, image: barberImage, shopId,
+              }).then((result) => setIsFavorite(result.isFavorite));
+            }}
+          >
+            <MaterialIcons
+              name={isFavorite ? "favorite" : "favorite-border"}
+              size={24}
+              color={isFavorite ? "#000" : "#D4AF37"}
+            />
+          </Pressable>
 
-        <Pressable
-          style={styles.reserveButton}
-          onPress={() =>
-            router.push({
+          <Pressable
+            style={styles.reserveButton}
+            onPress={() => router.push({
               pathname: "/(tabs)/booking-service",
-              params: {
-                shopId,
-                shopName,
-                preselectedBarberId: barberId,
-                preselectedBarberName: barberName,
-              },
-            })
-          }
-        >
-          <Text style={styles.reserveButtonText}>
-            Reservar con este barbero
-          </Text>
-        </Pressable>
+              params: { shopId, shopName, preselectedBarberId: barberId, preselectedBarberName: barberName },
+            })}
+          >
+            <Text style={styles.reserveButtonText}>Reservar Cita</Text>
+            <MaterialIcons name="event-available" size={20} color="#000" />
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
   header: {
-    height: 72,
-    paddingHorizontal: 20,
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
+  backButton: { width: 44, height: 44, justifyContent: "center" },
+  headerTitle: { color: "#FFF", fontSize: 16, fontWeight: "900", letterSpacing: 2, textTransform: "uppercase" },
+  headerSpacer: { width: 44 },
+  
   scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 130,
-    gap: 14,
-  },
-  heroCard: {
-    borderRadius: 16,
-    backgroundColor: "#2a2a2a",
+  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 140 },
+
+  heroContainer: {
+    alignItems: "center",
+    backgroundColor: "#111",
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    alignItems: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 4,
+    borderColor: "#222",
+    marginBottom: 20,
   },
-  avatar: { width: 92, height: 92, borderRadius: 46, marginBottom: 6 },
-  name: { color: "#e5e2e1", fontSize: 24, fontWeight: "800" },
-  role: { color: "#f2ca50", fontSize: 14, fontWeight: "600" },
-  branch: { color: "#d0c5af", fontSize: 12 },
-  ratingWrap: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  avatarOutline: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2,
+    borderColor: "#D4AF37",
+    padding: 4,
+    marginBottom: 16,
   },
-  ratingText: { color: "#d0c5af", fontSize: 13 },
+  avatar: { width: "100%", height: "100%", borderRadius: 50 },
+  name: { color: "#FFF", fontSize: 28, fontWeight: "900", marginBottom: 6 },
+  badge: {
+    backgroundColor: "rgba(212, 175, 55, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+    marginBottom: 16,
+  },
+  badgeText: { color: "#D4AF37", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  statsRow: { flexDirection: "row", alignItems: "center", gap: 15 },
+  statItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statText: { color: "#888", fontSize: 14, fontWeight: "600" },
+  statDivider: { width: 1, height: 12, backgroundColor: "#333" },
+
   section: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
+    backgroundColor: "#111",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
-    gap: 10,
+    borderColor: "#1A1A1A",
   },
-  sectionTitle: { color: "#e5e2e1", fontSize: 16, fontWeight: "700" },
-  chipsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  sectionTitle: { color: "#FFF", fontSize: 16, fontWeight: "800", marginBottom: 15 },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    borderRadius: 999,
+    backgroundColor: "#1A1A1A",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(242,202,80,0.35)",
-    backgroundColor: "rgba(242,202,80,0.08)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: "#222",
   },
-  chipText: { color: "#f2ca50", fontSize: 12, fontWeight: "600" },
-  bioText: { color: "#d0c5af", fontSize: 13, lineHeight: 20 },
+  chipText: { color: "#BBB", fontSize: 13, fontWeight: "600" },
+  bioText: { color: "#888", fontSize: 14, lineHeight: 22 },
+
   footer: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(14,14,14,0.96)",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 22,
+    backgroundColor: "rgba(10,10,10,0.95)",
+    paddingTop: 15,
+    paddingBottom: 35,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderColor: "#222",
+  },
+  footerRow: { flexDirection: "row", gap: 12 },
+  favAction: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  favActionActive: { backgroundColor: "#D4AF37" },
+  reserveButton: {
+    flex: 1,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: "#D4AF37",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
   },
-  favoriteButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(242,202,80,0.45)",
-    backgroundColor: "#1c1b1b",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  favoriteButtonText: {
-    color: "#f2ca50",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  reserveButton: {
-    minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reserveButtonText: { color: "#241a00", fontSize: 15, fontWeight: "800" },
+  reserveButtonText: { color: "#000", fontSize: 16, fontWeight: "900" },
 });

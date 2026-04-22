@@ -1,14 +1,16 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
     TextInput,
-    View
+    View,
 } from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
@@ -32,16 +34,13 @@ export default function EditServiceScreen() {
   const [featured, setFeatured] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({
+  const [toast, setToast] = useState({
     visible: false,
     message: "",
-    type: "info",
+    type: "info" as const,
   });
 
+  // ... (Mantenemos la lógica de funciones idéntica)
   const applyServiceToForm = (service: OwnerService) => {
     setSelectedServiceId(service.id);
     setServiceName(service.serviceName);
@@ -64,132 +63,122 @@ export default function EditServiceScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadServices = async () => {
       const storedServices = await getOwnerServices();
-      if (!isMounted) {
-        return;
-      }
-
+      if (!isMounted) return;
       setServices(storedServices);
-      if (storedServices[0]) {
-        applyServiceToForm(storedServices[0]);
-      }
+      if (storedServices[0]) applyServiceToForm(storedServices[0]);
       setIsLoading(false);
     };
-
     void loadServices();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
   const handleSave = async () => {
-    if (isSaving) {
-      return;
-    }
-
-    if (!serviceName.trim() || !category.trim()) {
+    if (isSaving) return;
+    if (
+      !serviceName.trim() ||
+      !category.trim() ||
+      !Number(price) ||
+      !Number(duration)
+    ) {
       setToast({
         visible: true,
-        message: "Nombre y categoria son obligatorios",
+        message: "Completa todos los campos",
         type: "error",
       });
       return;
     }
+    setIsSaving(true);
+    const previousServices = services;
 
-    if (!Number(price) || !Number(duration)) {
+    try {
+      const payload: OwnerService = {
+        id: selectedServiceId ?? `svc-${Date.now()}`,
+        serviceName: serviceName.trim(),
+        category: category.trim(),
+        description: description.trim(),
+        price,
+        duration,
+        featured,
+        active: true,
+      };
+      const nextServices = selectedServiceId
+        ? services.map((item) =>
+            item.id === selectedServiceId
+              ? { ...payload, active: item.active }
+              : item,
+          )
+        : [...services, payload];
+
+      setServices(nextServices);
+      const persisted = await saveOwnerServices(nextServices);
+      setServices(persisted);
+
+      if (selectedServiceId) {
+        const updated = persisted.find((item) => item.id === selectedServiceId);
+        if (updated) {
+          applyServiceToForm(updated);
+        }
+      } else {
+        const created = persisted[persisted.length - 1];
+        if (created) {
+          applyServiceToForm(created);
+        }
+      }
+
       setToast({
         visible: true,
-        message: "Precio y duracion deben ser numericos",
+        type: "success",
+        message: selectedServiceId
+          ? "Servicio actualizado"
+          : "Servicio agregado",
+      });
+    } catch {
+      setServices(previousServices);
+      setToast({
+        visible: true,
+        message: "No se pudo guardar en Supabase. Reintenta.",
         type: "error",
       });
-      return;
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsSaving(true);
-
-    const payload: OwnerService = {
-      id: selectedServiceId ?? `svc-${Date.now()}`,
-      serviceName: serviceName.trim(),
-      category: category.trim(),
-      description: description.trim(),
-      price,
-      duration,
-      featured,
-      active: true,
-    };
-
-    const nextServices = selectedServiceId
-      ? services.map((item) =>
-          item.id === selectedServiceId
-            ? {
-                ...payload,
-                active: item.active,
-              }
-            : item,
-        )
-      : [...services, payload];
-
-    setServices(nextServices);
-    await saveOwnerServices(nextServices);
-
-    setToast({
-      visible: true,
-      type: "success",
-      message: selectedServiceId ? "Servicio actualizado" : "Servicio agregado",
-    });
-
-    if (!selectedServiceId) {
-      applyServiceToForm(payload);
-    }
-
-    setIsSaving(false);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedServiceId || isSaving) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    const nextServices = services.filter(
-      (item) => item.id !== selectedServiceId,
-    );
-    setServices(nextServices);
-    await saveOwnerServices(nextServices);
-
-    if (nextServices[0]) {
-      applyServiceToForm(nextServices[0]);
-    } else {
-      clearForm();
-    }
-
-    setToast({ visible: true, message: "Servicio eliminado", type: "info" });
-    setIsSaving(false);
   };
 
   const toggleServiceActive = async (id: string) => {
-    if (isSaving) {
-      return;
-    }
-
+    if (isSaving) return;
     setIsSaving(true);
+    const previousServices = services;
     const nextServices = services.map((item) =>
       item.id === id ? { ...item, active: !item.active } : item,
     );
     setServices(nextServices);
-    await saveOwnerServices(nextServices);
 
-    const changed = nextServices.find((item) => item.id === id);
-    setToast({
-      visible: true,
-      message: `${changed?.serviceName ?? "Servicio"} ${changed?.active ? "activo" : "inactivo"}`,
-      type: "success",
-    });
-    setIsSaving(false);
+    try {
+      const persisted = await saveOwnerServices(nextServices);
+      setServices(persisted);
+      const selected = persisted.find((item) => item.id === selectedServiceId);
+      if (selected) {
+        applyServiceToForm(selected);
+      }
+      setToast({
+        visible: true,
+        message: "Estado actualizado",
+        type: "success",
+      });
+    } catch {
+      setServices(previousServices);
+      setToast({
+        visible: true,
+        message: "No se pudo actualizar el estado en Supabase.",
+        type: "error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -198,139 +187,188 @@ export default function EditServiceScreen() {
         visible={toast.visible}
         message={toast.message}
         type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
 
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#e5e2e1" />
+          <Feather name="chevron-left" size={28} color="#d4af37" />
         </Pressable>
-        <Text style={styles.headerTitle}>Editar Servicio</Text>
-        <View style={styles.backButton} />
+        <View>
+          <Text style={styles.headerTitle}>SERVICIOS</Text>
+          <Text style={styles.headerSubtitle}>Catálogo del local</Text>
+        </View>
+        <Pressable style={styles.newButtonHeader} onPress={clearForm}>
+          <Feather name="plus" size={24} color="#f2ca50" />
+        </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <View style={styles.servicesHeader}>
-          <Text style={styles.sectionTitle}>Servicios</Text>
-          <Pressable style={styles.newButton} onPress={clearForm}>
-            <MaterialIcons name="add" size={16} color="#f2ca50" />
-            <Text style={styles.newButtonText}>Nuevo</Text>
-          </Pressable>
-        </View>
-
-        {services.map((item) => (
-          <Pressable
-            key={item.id}
-            style={[
-              styles.serviceCard,
-              selectedServiceId === item.id && styles.serviceCardActive,
-            ]}
-            disabled={isSaving}
-            onPress={() => applyServiceToForm(item)}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.sectionLabel}>Tus servicios actuales</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
           >
-            <View style={styles.serviceCardBody}>
-              <Text style={styles.serviceCardName}>{item.serviceName}</Text>
-              <Text style={styles.serviceCardMeta}>
-                {item.duration} min · ${item.price}
+            {services.map((item) => (
+              <Pressable
+                key={item.id}
+                style={[
+                  styles.miniCard,
+                  selectedServiceId === item.id && styles.miniCardActive,
+                ]}
+                onPress={() => applyServiceToForm(item)}
+              >
+                <View
+                  style={item.active ? styles.dotActive : styles.dotInactive}
+                />
+                <Text
+                  style={[
+                    styles.miniCardName,
+                    selectedServiceId === item.id && styles.activeText,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.serviceName}
+                </Text>
+              </Pressable>
+            ))}
+            {services.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No hay servicios registrados
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <Feather
+                name={selectedServiceId ? "edit-3" : "plus-circle"}
+                size={20}
+                color="#d4af37"
+              />
+              <Text style={styles.formTitle}>
+                {selectedServiceId ? "Editar Detalles" : "Nuevo Servicio"}
               </Text>
             </View>
-            <Pressable
-              style={item.active ? styles.chipOn : styles.chipOff}
-              disabled={isSaving}
-              onPress={() => {
-                void toggleServiceActive(item.id);
-              }}
-            >
-              <Text
-                style={item.active ? styles.chipOnText : styles.chipOffText}
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Nombre del servicio</Text>
+              <TextInput
+                value={serviceName}
+                onChangeText={setServiceName}
+                style={styles.input}
+                placeholder="Ej: Corte + Barba Premium"
+                placeholderTextColor="#444"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Categoría</Text>
+              <TextInput
+                value={category}
+                onChangeText={setCategory}
+                style={styles.input}
+                placeholder="Ej: Combos, Barba..."
+                placeholderTextColor="#444"
+              />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.field, styles.half]}>
+                <Text style={styles.label}>Precio</Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputPrefix}>$</Text>
+                  <TextInput
+                    value={price}
+                    onChangeText={setPrice}
+                    style={[styles.input, { paddingLeft: 35 }]}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+              <View style={[styles.field, styles.half]}>
+                <Text style={styles.label}>Duración</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather
+                    name="clock"
+                    size={14}
+                    color="#d4af37"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    value={duration}
+                    onChangeText={setDuration}
+                    style={[styles.input, { paddingLeft: 35 }]}
+                    keyboardType="numeric"
+                    placeholder="min"
+                    placeholderTextColor="#444"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Descripción pública</Text>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                style={[styles.input, styles.multiline]}
+                multiline
+                numberOfLines={3}
+                placeholder="Describe qué incluye el servicio para tus clientes..."
+                placeholderTextColor="#444"
+              />
+            </View>
+
+            <View style={styles.toggleCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleTitle}>Destacar</Text>
+                <Text style={styles.toggleText}>
+                  Sugerir este servicio primero
+                </Text>
+              </View>
+              <Switch
+                value={featured}
+                onValueChange={setFeatured}
+                trackColor={{ true: "#d4af37", false: "#222" }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            {selectedServiceId && (
+              <Pressable
+                style={styles.deleteButton}
+                onPress={() => toggleServiceActive(selectedServiceId)}
               >
-                {item.active ? "Activo" : "Inactivo"}
-              </Text>
-            </Pressable>
-          </Pressable>
-        ))}
-
-        {isLoading ? (
-          <Text style={styles.emptyText}>Cargando servicios...</Text>
-        ) : null}
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Nombre del servicio</Text>
-          <TextInput
-            value={serviceName}
-            onChangeText={setServiceName}
-            style={styles.input}
-            placeholderTextColor="#777"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Categoria</Text>
-          <TextInput
-            value={category}
-            onChangeText={setCategory}
-            style={styles.input}
-            placeholderTextColor="#777"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Descripcion corta</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            style={[styles.input, styles.multiline]}
-            multiline
-          />
-        </View>
-
-        <View style={styles.row}>
-          <View style={[styles.field, styles.half]}>
-            <Text style={styles.label}>Precio</Text>
-            <TextInput
-              value={price}
-              onChangeText={setPrice}
-              style={styles.input}
-              keyboardType="numeric"
-            />
+                <Feather
+                  name={
+                    services.find((s) => s.id === selectedServiceId)?.active
+                      ? "eye-off"
+                      : "eye"
+                  }
+                  size={16}
+                  color="#666"
+                />
+                <Text style={styles.deleteText}>
+                  {services.find((s) => s.id === selectedServiceId)?.active
+                    ? "Desactivar de la lista"
+                    : "Activar servicio"}
+                </Text>
+              </Pressable>
+            )}
           </View>
-          <View style={[styles.field, styles.half]}>
-            <Text style={styles.label}>Duracion (min)</Text>
-            <TextInput
-              value={duration}
-              onChangeText={setDuration}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-
-        <View style={styles.toggleCard}>
-          <View>
-            <Text style={styles.toggleTitle}>Servicio destacado</Text>
-            <Text style={styles.toggleText}>Mostrar en pantalla principal</Text>
-          </View>
-          <Switch
-            value={featured}
-            onValueChange={setFeatured}
-            trackColor={{ true: "#d4af37", false: "#4d4635" }}
-            thumbColor="#fff"
-          />
-        </View>
-
-        {selectedServiceId ? (
-          <Pressable
-            style={styles.deleteButton}
-            onPress={() => void handleDelete()}
-          >
-            <MaterialIcons name="delete-outline" size={18} color="#ffb4ab" />
-            <Text style={styles.deleteText}>Eliminar servicio</Text>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <Pressable
@@ -339,12 +377,10 @@ export default function EditServiceScreen() {
             (isSaving || isLoading) && styles.saveButtonDisabled,
           ]}
           disabled={isSaving || isLoading}
-          onPress={() => {
-            void handleSave();
-          }}
+          onPress={() => void handleSave()}
         >
           <Text style={styles.saveText}>
-            {isSaving ? "Guardando..." : "Guardar cambios"}
+            {isSaving ? "Guardando..." : "Confirmar Cambios"}
           </Text>
         </Pressable>
       </View>
@@ -355,147 +391,177 @@ export default function EditServiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#080808" },
   header: {
-    height: 72,
+    height: 110,
+    paddingTop: 50,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  headerSubtitle: { color: "#555", fontSize: 12, marginTop: -2 },
   backButton: {
     width: 40,
     height: 40,
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
   },
-  headerTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 190,
-    gap: 16,
-  },
-  servicesHeader: {
-    flexDirection: "row",
+  newButtonHeader: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#111",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "700" },
-  newButton: {
-    minHeight: 34,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(212,175,55,0.3)",
-    backgroundColor: "#2a2a2a",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    borderColor: "#222",
   },
-  newButtonText: { color: "#f2ca50", fontSize: 12, fontWeight: "700" },
-  serviceCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  serviceCardActive: {
-    borderColor: "rgba(212,175,55,0.45)",
-  },
-  serviceCardBody: { flex: 1 },
-  serviceCardName: { color: "#e5e2e1", fontSize: 15, fontWeight: "700" },
-  serviceCardMeta: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  chipOn: {
-    minHeight: 28,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    backgroundColor: "rgba(212,175,55,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipOnText: { color: "#f2ca50", fontSize: 11, fontWeight: "700" },
-  chipOff: {
-    minHeight: 28,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    backgroundColor: "rgba(77,70,53,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipOffText: { color: "#99907c", fontSize: 11, fontWeight: "700" },
-  emptyText: { color: "#99907c", fontSize: 12, textAlign: "center" },
-  field: { gap: 8 },
-  label: {
-    color: "#d0c5af",
-    fontSize: 12,
+  content: { paddingHorizontal: 20, paddingBottom: 180 },
+
+  sectionLabel: {
+    color: "#d4af37",
+    fontSize: 11,
+    fontWeight: "800",
     textTransform: "uppercase",
+    marginBottom: 15,
     letterSpacing: 1,
   },
-  input: {
-    minHeight: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: "#4d4635",
-    color: "#e5e2e1",
-    fontSize: 16,
-    paddingHorizontal: 0,
-    paddingVertical: 8,
-  },
-  multiline: { minHeight: 90, textAlignVertical: "top" },
-  row: { flexDirection: "row", gap: 12 },
-  half: { flex: 1 },
-  toggleCard: {
-    marginTop: 10,
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
+  horizontalScroll: { marginBottom: 25 },
+  miniCard: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: "#111",
+    marginRight: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  toggleTitle: { color: "#e5e2e1", fontSize: 16, fontWeight: "700" },
-  toggleText: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  deleteButton: {
-    minHeight: 44,
-    borderRadius: 10,
+    gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,180,171,0.35)",
-    backgroundColor: "#2a2a2a",
+    borderColor: "#222",
+  },
+  miniCardActive: { borderColor: "#d4af37", backgroundColor: "#1a1608" },
+  miniCardName: { color: "#555", fontSize: 14, fontWeight: "700" },
+  activeText: { color: "#fff" },
+  dotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#4CAF50",
+  },
+  dotInactive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#F44336",
+  },
+
+  formCard: {
+    backgroundColor: "#111",
+    borderRadius: 28,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  formHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 25,
+  },
+  formTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  field: { marginBottom: 20 },
+  label: {
+    color: "#444",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: { position: "relative", justifyContent: "center" },
+  inputPrefix: {
+    position: "absolute",
+    left: 15,
+    zIndex: 1,
+    color: "#d4af37",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  inputIcon: { position: "absolute", left: 12, zIndex: 1 },
+  input: {
+    backgroundColor: "#080808",
+    borderRadius: 15,
+    color: "#fff",
+    fontSize: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  multiline: { minHeight: 100, textAlignVertical: "top" },
+  row: { flexDirection: "row", gap: 15 },
+  half: { flex: 1 },
+
+  toggleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#080808",
+    padding: 16,
+    borderRadius: 18,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  toggleTitle: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  toggleText: { color: "#444", fontSize: 12, marginTop: 2 },
+
+  deleteButton: {
+    marginTop: 20,
+    padding: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
   },
-  deleteText: { color: "#ffb4ab", fontSize: 13, fontWeight: "700" },
+  deleteText: { color: "#555", fontSize: 13, fontWeight: "600" },
+
   footer: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 74,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 22,
-    backgroundColor: "rgba(14,14,14,0.96)",
+    bottom: 90,
+    left: 20,
+    right: 20,
   },
   saveButton: {
-    minHeight: 54,
-    borderRadius: 12,
+    height: 65,
+    borderRadius: 20,
     backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#d4af37",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  saveButtonDisabled: { opacity: 0.7 },
+  saveButtonDisabled: { backgroundColor: "#222", shadowOpacity: 0 },
   saveText: {
-    color: "#3c2f00",
-    fontSize: 17,
-    fontWeight: "800",
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "900",
     textTransform: "uppercase",
+    letterSpacing: 1,
   },
+  emptyContainer: { paddingVertical: 10 },
+  emptyText: { color: "#333", fontSize: 14, fontStyle: "italic" },
 });

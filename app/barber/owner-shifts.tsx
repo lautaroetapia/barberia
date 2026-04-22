@@ -1,4 +1,4 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -25,61 +25,10 @@ import {
     type ShiftPreferences,
 } from "@/lib/owner-shifts";
 
-const weekDays = [
-  "Domingo",
-  "Lunes",
-  "Martes",
-  "Miercoles",
-  "Jueves",
-  "Viernes",
-  "Sabado",
-];
-
-const monthNames = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
-
-const shiftLabel: Record<ShiftName, string> = {
-  morning: "Manana",
-  afternoon: "Tarde",
-  night: "Noche",
-};
-
-const shiftStartHour: Record<ShiftName, number> = {
-  morning: 9,
-  afternoon: 13,
-  night: 18,
-};
-
-const toTimeText = (hour: number, minute: number) => {
-  const hh = `${hour}`.padStart(2, "0");
-  const mm = `${minute}`.padStart(2, "0");
-  return `${hh}:${mm}`;
-};
-
-const buildShiftTimes = (shift: ShiftName, count: number) => {
-  const start = shiftStartHour[shift];
-  const times: string[] = [];
-
-  for (let i = 0; i < count; i += 1) {
-    const totalMinutes = start * 60 + i * 30;
-    const hh = Math.floor(totalMinutes / 60);
-    const mm = totalMinutes % 60;
-    times.push(toTimeText(hh, mm));
-  }
-
-  return times;
+const TARGET_SHIFT_TIMES: Record<ShiftName, string[]> = {
+  morning: ["09:00", "10:00", "11:00"],
+  afternoon: ["13:00", "14:00", "15:00", "16:00", "17:00"],
+  night: ["18:00", "19:00", "20:00", "21:00"],
 };
 
 export default function OwnerShiftsScreen() {
@@ -92,11 +41,11 @@ export default function OwnerShiftsScreen() {
   const [appointments, setAppointments] = useState<OwnerAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({ visible: false, message: "", type: "info" });
+  const [toast, setToast] = useState({
+    visible: false,
+    message: "",
+    type: "info" as "success" | "info" | "error",
+  });
 
   const selectedDate = useMemo(() => {
     const date = new Date();
@@ -105,44 +54,62 @@ export default function OwnerShiftsScreen() {
   }, [dayOffset]);
 
   const selectedDateLabel = useMemo(() => {
-    return `${weekDays[selectedDate.getDay()]}, ${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()]}`;
+    const day = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][
+      selectedDate.getDay()
+    ];
+    const month = [
+      "Ene",
+      "Feb",
+      "Mar",
+      "Abr",
+      "May",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dic",
+    ][selectedDate.getMonth()];
+    return `${day}, ${selectedDate.getDate()} ${month}`;
   }, [selectedDate]);
 
-  const shiftCounters = useMemo(() => {
-    const counters: Record<ShiftName, number> = {
-      morning: 0,
-      afternoon: 0,
-      night: 0,
-    };
-
-    appointments.forEach((item) => {
-      if (item.status === "libre") {
-        return;
-      }
-
-      const shift = getShiftForTime(item.time);
-      counters[shift] += 1;
-    });
-
-    return counters;
-  }, [appointments]);
+  const shiftData = {
+    morning: { label: "Mañana", icon: "sun" as const, color: "#f2ca50" },
+    afternoon: { label: "Tarde", icon: "sunrise" as const, color: "#ff8c00" },
+    night: { label: "Noche", icon: "moon" as const, color: "#87ceeb" },
+  };
 
   useEffect(() => {
     let isMounted = true;
 
     const loadData = async () => {
-      const [shiftPrefs, storedAppointments] = await Promise.all([
-        getShiftPreferencesByDate(selectedDate),
-        getOwnerAppointmentsByDate(selectedDate),
-      ]);
+      setIsLoading(true);
+      try {
+        const [nextPreferences, nextAppointments] = await Promise.all([
+          getShiftPreferencesByDate(selectedDate),
+          getOwnerAppointmentsByDate(selectedDate),
+        ]);
 
-      if (!isMounted) {
-        return;
+        if (!isMounted) {
+          return;
+        }
+
+        setPreferences(nextPreferences);
+        setAppointments(nextAppointments);
+      } catch {
+        if (isMounted) {
+          setToast({
+            visible: true,
+            message: "No se pudieron cargar las franjas.",
+            type: "error",
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-
-      setPreferences(shiftPrefs);
-      setAppointments(storedAppointments);
-      setIsLoading(false);
     };
 
     void loadData();
@@ -152,101 +119,154 @@ export default function OwnerShiftsScreen() {
     };
   }, [selectedDate]);
 
+  // Genera horarios cada 30 minutos para cada franja
+  const getShiftTimeSlots = (shift: ShiftName) => {
+    let start = 9,
+      end = 12; // morning
+    if (shift === "afternoon") {
+      start = 13;
+      end = 18;
+    }
+    if (shift === "night") {
+      start = 18;
+      end = 22;
+    }
+    const slots: string[] = [];
+    for (let h = start; h < end; h++) {
+      slots.push(`${h.toString().padStart(2, "0")}:00`);
+      slots.push(`${h.toString().padStart(2, "0")}:30`);
+    }
+    return slots;
+  };
+
   const togglePreference = async (shift: ShiftName) => {
-    if (isProcessing) {
+    if (isProcessing) return;
+
+    const hasTurnos = appointments.some(
+      (a) => a.status !== "libre" && getShiftForTime(a.time) === shift,
+    );
+    const nextEnabled = !preferences[shift];
+
+    if (!nextEnabled && hasTurnos) {
+      Alert.alert(
+        "Franja con turnos",
+        "Esta franja tiene turnos activos. Reprogramalos antes de desactivarla.",
+      );
       return;
     }
 
     setIsProcessing(true);
     try {
-      const nextPreferences: ShiftPreferences = {
-        ...preferences,
-        [shift]: !preferences[shift],
-      };
-
-      setPreferences(nextPreferences);
+      const nextPreferences = { ...preferences, [shift]: nextEnabled };
       await saveShiftPreferencesByDate(selectedDate, nextPreferences);
+      setPreferences(nextPreferences);
+
+      // Si se activa la franja, crear horarios cada 30 minutos
+      if (nextEnabled) {
+        const times = getShiftTimeSlots(shift);
+        const existingTimes = appointments
+          .filter((a) => getShiftForTime(a.time) === shift)
+          .map((a) => a.time);
+        const newTimes = times.filter((t) => !existingTimes.includes(t));
+        if (newTimes.length > 0) {
+          const newAppointments = newTimes.map((time, idx) => ({
+            id: `${shift}-${time}-${Date.now()}-${idx}`,
+            time,
+            client: "",
+            service: "",
+            status: "libre",
+          }));
+          try {
+            const { saveOwnerAppointmentsByDate } =
+              await import("@/lib/owner-agenda");
+            await saveOwnerAppointmentsByDate(selectedDate, [
+              ...appointments,
+              ...newAppointments,
+            ]);
+            setAppointments((prev) => [...prev, ...newAppointments]);
+            setToast({
+              visible: true,
+              message: `Se crearon ${newAppointments.length} horarios para la franja ${shiftData[shift].label}.`,
+              type: "success",
+            });
+          } catch (err) {
+            setToast({
+              visible: true,
+              message: "No se pudieron crear los horarios en Supabase.",
+              type: "error",
+            });
+          }
+        } else {
+          setToast({
+            visible: true,
+            message: `No hay horarios nuevos para crear en la franja ${shiftData[shift].label}.`,
+            type: "info",
+          });
+        }
+      }
+    } catch {
       setToast({
         visible: true,
-        type: "success",
-        message: `Franja ${shiftLabel[shift].toLowerCase()} ${
-          nextPreferences[shift] ? "activada" : "desactivada"
-        }`,
+        message: "No se pudo actualizar la franja.",
+        type: "error",
       });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const reprogramShift = (fromShift: ShiftName, toShift: ShiftName) => {
-    if (fromShift === toShift) {
+  const reprogramShift = async (fromShift: ShiftName, toShift: ShiftName) => {
+    if (isProcessing) {
       return;
     }
 
-    const candidates = appointments.filter(
-      (item) =>
-        item.status !== "libre" && getShiftForTime(item.time) === fromShift,
+    const fromAppointments = appointments.filter(
+      (a) => a.status !== "libre" && getShiftForTime(a.time) === fromShift,
     );
 
-    if (!candidates.length) {
+    if (!fromAppointments.length) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      let index = 0;
+      const nextAppointments = appointments.map((appointment) => {
+        if (
+          appointment.status === "libre" ||
+          getShiftForTime(appointment.time) !== fromShift
+        ) {
+          return appointment;
+        }
+
+        const targetTimes = TARGET_SHIFT_TIMES[toShift];
+        const nextTime =
+          targetTimes[Math.min(index, targetTimes.length - 1)] ??
+          appointment.time;
+        index += 1;
+
+        return {
+          ...appointment,
+          time: nextTime,
+        };
+      });
+
+      await saveOwnerAppointmentsByDate(selectedDate, nextAppointments);
+      setAppointments(nextAppointments);
       setToast({
         visible: true,
-        type: "info",
-        message: `No hay turnos en ${shiftLabel[fromShift].toLowerCase()}.`,
+        message: `Turnos movidos a ${shiftData[toShift].label}.`,
+        type: "success",
       });
-      return;
+    } catch {
+      setToast({
+        visible: true,
+        message: "No se pudieron reprogramar los turnos.",
+        type: "error",
+      });
+    } finally {
+      setIsProcessing(false);
     }
-
-    Alert.alert(
-      "Reprogramar turnos",
-      `Mover ${candidates.length} turno(s) de ${shiftLabel[fromShift].toLowerCase()} a ${shiftLabel[toShift].toLowerCase()}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Mover",
-          onPress: () => {
-            if (isProcessing) {
-              return;
-            }
-
-            setIsProcessing(true);
-            const times = buildShiftTimes(toShift, candidates.length);
-            let cursor = 0;
-
-            const nextAppointments = appointments
-              .map((item) => {
-                if (
-                  item.status === "libre" ||
-                  getShiftForTime(item.time) !== fromShift
-                ) {
-                  return item;
-                }
-
-                const nextTime = times[cursor] ?? item.time;
-                cursor += 1;
-                return {
-                  ...item,
-                  time: nextTime,
-                };
-              })
-              .sort((a, b) => a.time.localeCompare(b.time));
-
-            setAppointments(nextAppointments);
-            void saveOwnerAppointmentsByDate(selectedDate, nextAppointments)
-              .then(() => {
-                setToast({
-                  visible: true,
-                  type: "success",
-                  message: `Turnos movidos a ${shiftLabel[toShift].toLowerCase()}`,
-                });
-              })
-              .finally(() => {
-                setIsProcessing(false);
-              });
-          },
-        },
-      ],
-    );
   };
 
   return (
@@ -255,95 +275,136 @@ export default function OwnerShiftsScreen() {
         visible={toast.visible}
         message={toast.message}
         type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
 
       <View style={styles.topBar}>
         <Pressable
-          style={styles.iconButton}
+          style={styles.backButton}
           onPress={() => router.replace("/barber/owner-more-settings")}
         >
-          <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
+          <Feather name="chevron-left" size={28} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>Franjas</Text>
-        <View style={styles.iconButton} />
+        <Text style={styles.brand}>Franjas Horarias</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.dateHeader}>
-          <Pressable onPress={() => setDayOffset((prev) => prev - 1)}>
-            <MaterialIcons name="chevron-left" size={24} color="#d0c5af" />
+        {/* Selector de Fecha Estilizado */}
+        <View style={styles.datePickerContainer}>
+          <Pressable
+            style={styles.dateArrow}
+            onPress={() => setDayOffset((prev) => prev - 1)}
+          >
+            <Feather name="chevron-left" size={20} color="#d4af37" />
           </Pressable>
-          <Text style={styles.dateTitle}>{selectedDateLabel}</Text>
-          <Pressable onPress={() => setDayOffset((prev) => prev + 1)}>
-            <MaterialIcons name="chevron-right" size={24} color="#d0c5af" />
+          <View style={styles.dateInfo}>
+            <Feather
+              name="calendar"
+              size={14}
+              color="#d4af37"
+              style={{ marginBottom: 4 }}
+            />
+            <Text style={styles.dateTitle}>{selectedDateLabel}</Text>
+          </View>
+          <Pressable
+            style={styles.dateArrow}
+            onPress={() => setDayOffset((prev) => prev + 1)}
+          >
+            <Feather name="chevron-right" size={20} color="#d4af37" />
           </Pressable>
         </View>
 
-        {isLoading ? <Text style={styles.loadingText}>Cargando...</Text> : null}
+        {(["morning", "afternoon", "night"] as const).map((shift) => {
+          const isActive = preferences[shift];
+          // Contar todos los turnos (libres y agendados) para mostrar el total
+          const totalTurnos = appointments.filter(
+            (a) => getShiftForTime(a.time) === shift,
+          ).length;
+          const hasTurnos = appointments.filter(
+            (a) => a.status !== "libre" && getShiftForTime(a.time) === shift,
+          ).length;
 
-        {(["morning", "afternoon", "night"] as const).map((shift) => (
-          <View key={shift} style={styles.shiftCard}>
-            <View style={styles.shiftHeader}>
-              <View>
-                <Text style={styles.shiftTitle}>{shiftLabel[shift]}</Text>
-                <Text style={styles.shiftMeta}>
-                  {shiftCounters[shift]} turno(s)
-                </Text>
+          return (
+            <View
+              key={shift}
+              style={[styles.shiftCard, !isActive && styles.shiftCardInactive]}
+            >
+              <View style={styles.shiftHeader}>
+                <View style={styles.shiftIconText}>
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: shiftData[shift].color + "20" },
+                    ]}
+                  >
+                    <Feather
+                      name={shiftData[shift].icon}
+                      size={20}
+                      color={shiftData[shift].color}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.shiftTitle}>
+                      {shiftData[shift].label}
+                    </Text>
+                    <Text style={styles.shiftMeta}>{totalTurnos} horarios</Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  style={[
+                    styles.switchBase,
+                    isActive ? styles.switchOn : styles.switchOff,
+                  ]}
+                  onPress={() => togglePreference(shift)}
+                  disabled={isProcessing}
+                >
+                  <View
+                    style={[styles.switchDot, isActive && styles.switchDotOn]}
+                  />
+                </Pressable>
               </View>
-              <Pressable
-                style={preferences[shift] ? styles.toggleOn : styles.toggleOff}
-                disabled={isProcessing}
-                onPress={() => {
-                  void togglePreference(shift);
-                }}
-              >
-                <View style={styles.toggleDot} />
-              </Pressable>
+
+              {/* Sección de Reprogramación */}
+              <View style={styles.actionsContainer}>
+                <Text style={styles.actionLabel}>Mover turnos a:</Text>
+                <View style={styles.buttonGroup}>
+                  {(["morning", "afternoon", "night"] as const).map(
+                    (dest) =>
+                      dest !== shift && (
+                        <Pressable
+                          key={dest}
+                          style={styles.actionButton}
+                          onPress={() => reprogramShift(shift, dest)}
+                          disabled={isProcessing || !hasTurnos}
+                        >
+                          <Feather
+                            name="arrow-right"
+                            size={12}
+                            color="#d4af37"
+                          />
+                          <Text style={styles.actionButtonText}>
+                            {shiftData[dest].label}
+                          </Text>
+                        </Pressable>
+                      ),
+                  )}
+                </View>
+              </View>
             </View>
+          );
+        })}
 
-            <View style={styles.reprogramRow}>
-              {shift !== "morning" ? (
-                <Pressable
-                  style={styles.reprogramButton}
-                  disabled={isProcessing}
-                  onPress={() => reprogramShift(shift, "morning")}
-                >
-                  <Text style={styles.reprogramText}>Mover a manana</Text>
-                </Pressable>
-              ) : null}
-
-              {shift !== "afternoon" ? (
-                <Pressable
-                  style={styles.reprogramButton}
-                  disabled={isProcessing}
-                  onPress={() => reprogramShift(shift, "afternoon")}
-                >
-                  <Text style={styles.reprogramText}>Mover a tarde</Text>
-                </Pressable>
-              ) : null}
-
-              {shift !== "night" ? (
-                <Pressable
-                  style={styles.reprogramButton}
-                  disabled={isProcessing}
-                  onPress={() => reprogramShift(shift, "night")}
-                >
-                  <Text style={styles.reprogramText}>Mover a noche</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        ))}
-
-        <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>Nota</Text>
-          <Text style={styles.noteText}>
-            Esta pantalla es independiente de Agenda. Aqui defines en que
-            franjas quieres atender y puedes mover turnos de una franja a otra.
+        <View style={styles.infoBox}>
+          <Feather name="info" size={16} color="#99907c" />
+          <Text style={styles.infoText}>
+            Activa o desactiva franjas para controlar tu disponibilidad. Si
+            tienes turnos en una franja desactivada, muévelos a otra para
+            mantener tu agenda organizada.
           </Text>
         </View>
       </ScrollView>
@@ -354,114 +415,127 @@ export default function OwnerShiftsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#0c0c0c" },
   topBar: {
-    height: 70,
+    height: 100,
+    paddingTop: 40,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
+    backgroundColor: "#0c0c0c",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: "#151515",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  brand: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  content: { paddingHorizontal: 20, paddingBottom: 120 },
+
+  datePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#151515",
+    borderRadius: 20,
+    padding: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  dateArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#1a1a1a",
     alignItems: "center",
     justifyContent: "center",
   },
-  brand: {
-    color: "#d4af37",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 110,
-    gap: 12,
-  },
-  dateHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  dateTitle: {
-    color: "#e5e2e1",
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  loadingText: {
-    color: "#99907c",
-    fontSize: 12,
-    textAlign: "center",
-  },
+  dateInfo: { flex: 1, alignItems: "center" },
+  dateTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+
   shiftCard: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
+    backgroundColor: "#151515",
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
-    gap: 10,
+    borderColor: "#222",
   },
+  shiftCardInactive: { opacity: 0.6, borderColor: "transparent" },
   shiftHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  shiftTitle: { color: "#e5e2e1", fontSize: 18, fontWeight: "700" },
-  shiftMeta: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  toggleOn: {
-    width: 42,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(212,175,55,0.25)",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    alignItems: "flex-end",
-  },
-  toggleOff: {
-    width: 42,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(77,70,53,0.25)",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    alignItems: "flex-start",
-  },
-  toggleDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#f2ca50",
-  },
-  reprogramRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  reprogramButton: {
-    minHeight: 34,
-    borderRadius: 9,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(212,175,55,0.3)",
-    backgroundColor: "#2a2a2a",
+  shiftIconText: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  reprogramText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "700",
+  shiftTitle: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  shiftMeta: { color: "#777", fontSize: 12, marginTop: 2 },
+
+  // Switch Estilizado
+  switchBase: {
+    width: 50,
+    height: 28,
+    borderRadius: 15,
+    padding: 4,
+    justifyContent: "center",
   },
-  noteCard: {
+  switchOn: { backgroundColor: "#d4af37" },
+  switchOff: { backgroundColor: "#333" },
+  switchDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+  },
+  switchDotOn: { alignSelf: "flex-end" },
+
+  actionsContainer: {
+    borderTopWidth: 1,
+    borderTopColor: "#222",
+    paddingTop: 16,
+  },
+  actionLabel: {
+    color: "#555",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  buttonGroup: { flexDirection: "row", gap: 10 },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#1c1c1c",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    backgroundColor: "#1c1b1b",
-    padding: 14,
+    borderColor: "#333",
   },
-  noteTitle: { color: "#e5e2e1", fontSize: 14, fontWeight: "700" },
-  noteText: { color: "#d0c5af", fontSize: 12, marginTop: 4, lineHeight: 18 },
+  actionButtonText: { color: "#d4af37", fontSize: 13, fontWeight: "600" },
+
+  infoBox: {
+    flexDirection: "row",
+    backgroundColor: "#151515",
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
+    marginTop: 10,
+  },
+  infoText: { color: "#99907c", fontSize: 12, flex: 1, lineHeight: 18 },
 });

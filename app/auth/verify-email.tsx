@@ -1,222 +1,280 @@
+import React, { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  SafeAreaView,
+  Linking,
+  Platform,
+  Dimensions,
+} from "react-native";
 
-const ENVELOPE_URI =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDOQGuCIC4eMDr9-5k_-5CnDRPNbxW62FkkG-XdxaV-nEbKZlQ5R5kz_BOJhd7XVVxszvkeG2HYp-sK0MIWiOqqCvVLf5YKQQ-quQNP-3TrhD1eZ48gw--4_s5PGEDmlSZSLEoGozGLGyWqb5iZG4Hk5RCvociDuFpo-H_AYcfNmicmh6X8yNYEPSPekywN_YEsTsTAETfnqVC5dZuE0CuEz10CbGAysMwYvi1jDoxZXoDv9omc6ISajov5KRX6vIjpzZS3nrDD6bXO";
+const { width } = Dimensions.get("window");
 
 export default function VerifyEmailScreen() {
+  const [countdown, setCountdown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+
+  // Lógica del temporizador para el reenvío
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleOpenEmailApp = () => {
+    if (Platform.OS === "ios") {
+      Linking.openURL("message://");
+    } else {
+      Linking.openURL("mailto:");
+    }
+  };
+
+  const handleResendEmail = () => {
+    if (!canResend) return;
+    // Aquí iría tu lógica de Supabase: supabase.auth.resend({ type: 'signup', email: '...' })
+    setCountdown(60);
+    setCanResend(false);
+    console.log("Correo reenviado");
+  };
+
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
       <StatusBar style="light" />
 
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconButton}>
-          <MaterialIcons name="menu" size={24} color="#d4af37" />
+      {/* --- CABECERA --- */}
+      <View style={styles.header}>
+        <Pressable 
+          onPress={() => router.back()} 
+          style={styles.backIconButton}
+          accessibilityLabel="Volver"
+        >
+          <MaterialIcons name="chevron-left" size={34} color="#D4AF37" />
         </Pressable>
-        <Text style={styles.topTitle}>NAVAJA DORADA</Text>
-        <View style={styles.avatarWrap}>
-          <MaterialIcons name="person" size={20} color="#d0c5af" />
-        </View>
+        <Text style={styles.brandTitle}>NAVAJA DORADA</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.illustrationWrap}>
-          <View style={styles.glow} />
-          <Image
-            source={{ uri: ENVELOPE_URI }}
-            style={styles.illustration}
-            contentFit="contain"
-          />
-          <View style={styles.sealWrap}>
-            <View style={styles.seal}>
-              <MaterialIcons name="content-cut" size={22} color="#3c2f00" />
+      <View style={styles.container}>
+        
+        {/* --- ILUSTRACIÓN VECTORIAL PREMIUM --- */}
+        <View style={styles.illustrationContainer}>
+          <View style={styles.glowEffect} />
+          <View style={styles.envelopeBase}>
+            <MaterialIcons name="mail-outline" size={70} color="rgba(212, 175, 55, 0.15)" />
+            <View style={styles.goldSeal}>
+              <MaterialIcons name="content-cut" size={22} color="#000" />
             </View>
           </View>
         </View>
 
-        <Text style={styles.title}>Estas a un paso</Text>
-        <Text style={styles.subtitle}>
-          Enviamos un enlace a tu correo. Activa tu cuenta para continuar.
-        </Text>
-
-        <Pressable style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Abrir correo</Text>
-        </Pressable>
-
-        <View style={styles.secondaryBlock}>
-          <Pressable>
-            <Text style={styles.resendText}>Reenviar</Text>
-          </Pressable>
-          <Text style={styles.countdownText}>
-            Podras reenviar en <Text style={styles.countdownStrong}>60s</Text>
+        {/* --- CONTENIDO DE TEXTO --- */}
+        <View style={styles.textContent}>
+          <Text style={styles.mainTitle}>Verifica tu cuenta</Text>
+          <Text style={styles.description}>
+            Casi terminamos. Te enviamos un enlace de confirmación. Revisa tu bandeja de entrada para activar tu perfil.
           </Text>
         </View>
 
-        <View style={styles.bottomSpacer} />
+        {/* --- ACCIONES --- */}
+        <View style={styles.actionArea}>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.buttonPressed
+            ]}
+            onPress={handleOpenEmailApp}
+          >
+            <Text style={styles.primaryButtonText}>Abrir mi correo</Text>
+            <MaterialIcons name="open-in-new" size={20} color="#000" />
+          </Pressable>
 
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.replace("/auth/login")}
-        >
-          <MaterialIcons name="arrow-back" size={18} color="#d0c5af" />
-          <Text style={styles.backText}>Volver a Iniciar sesion</Text>
-        </Pressable>
+          <View style={styles.resendBox}>
+            <Text style={styles.infoText}>¿No recibiste el código?</Text>
+            <Pressable 
+              onPress={handleResendEmail}
+              disabled={!canResend}
+              style={({ pressed }) => [
+                pressed && canResend && { opacity: 0.7 }
+              ]}
+            >
+              <Text style={[styles.resendLink, !canResend && styles.resendDisabled]}>
+                {canResend ? "Reenviar ahora" : `Reenviar en ${countdown}s`}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* --- FOOTER --- */}
+        <View style={styles.footer}>
+          <Pressable 
+            onPress={() => router.replace("/auth/login")}
+            style={styles.loginLink}
+          >
+            <MaterialIcons name="keyboard-backspace" size={18} color="#555" />
+            <Text style={styles.loginLinkText}>Volver al inicio de sesión</Text>
+          </Pressable>
+        </View>
+
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#131313",
+    backgroundColor: "#0A0A0A", // Negro mate profundo
   },
-  topBar: {
-    height: 64,
-    paddingHorizontal: 24,
-    paddingTop: 8,
+  header: {
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
+  backIconButton: {
+    width: 44,
+    height: 44,
     justifyContent: "center",
-  },
-  topTitle: {
-    color: "#d4af37",
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: "800",
-    letterSpacing: 2.2,
-  },
-  avatarWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.35)",
-    backgroundColor: "#2a2a2a",
     alignItems: "center",
-    justifyContent: "center",
   },
-  content: {
+  brandTitle: {
+    color: "#D4AF37",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 4,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  container: {
     flex: 1,
-    maxWidth: 420,
-    width: "100%",
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 28,
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 30,
   },
-  illustrationWrap: {
-    width: 160,
-    height: 160,
-    marginBottom: 34,
+  illustrationContainer: {
+    marginBottom: 40,
     alignItems: "center",
     justifyContent: "center",
   },
-  glow: {
+  glowEffect: {
     position: "absolute",
-    width: 156,
-    height: 156,
-    borderRadius: 78,
-    backgroundColor: "rgba(242, 202, 80, 0.12)",
-    shadowColor: "#d4af37",
-    shadowOpacity: 0.25,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 0 },
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(212, 175, 55, 0.05)",
   },
-  illustration: {
-    width: 150,
-    height: 150,
-    opacity: 0.9,
-  },
-  sealWrap: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  seal: {
-    width: 56,
-    height: 56,
+  envelopeBase: {
+    width: 110,
+    height: 110,
     borderRadius: 28,
-    backgroundColor: "#d4af37",
+    backgroundColor: "#111",
+    borderWidth: 1,
+    borderColor: "#222",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#d4af37",
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
   },
-  title: {
-    color: "#e5e2e1",
-    fontSize: 34,
-    lineHeight: 40,
+  goldSeal: {
+    position: "absolute",
+    bottom: -8,
+    right: -8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#D4AF37",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: "#0A0A0A",
+    elevation: 4,
+  },
+  textContent: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  mainTitle: {
+    color: "#FFF",
+    fontSize: 32,
+    fontWeight: "900",
     textAlign: "center",
-    fontWeight: "800",
     marginBottom: 12,
+    letterSpacing: -1,
   },
-  subtitle: {
-    color: "#d0c5af",
-    textAlign: "center",
+  description: {
+    color: "#777",
     fontSize: 16,
-    lineHeight: 25,
-    maxWidth: 300,
-    marginBottom: 30,
+    lineHeight: 24,
+    textAlign: "center",
+  },
+  actionArea: {
+    width: "100%",
+    alignItems: "center",
   },
   primaryButton: {
     width: "100%",
-    minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  primaryButtonText: {
-    color: "#3c2f00",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  secondaryBlock: {
-    alignItems: "center",
-    gap: 8,
-  },
-  resendText: {
-    color: "#f2ca50",
-    fontSize: 15,
-    textDecorationLine: "underline",
-  },
-  countdownText: {
-    color: "rgba(208, 197, 175, 0.72)",
-    fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  countdownStrong: {
-    color: "#d0c5af",
-    fontWeight: "700",
-  },
-  bottomSpacer: {
-    flex: 1,
-  },
-  backButton: {
+    height: 64,
+    backgroundColor: "#D4AF37",
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 12,
+    justifyContent: "center",
+    gap: 12,
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  backText: {
-    color: "#d0c5af",
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  primaryButtonText: {
+    color: "#000",
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  resendBox: {
+    marginTop: 30,
+    alignItems: "center",
+    gap: 6,
+  },
+  infoText: {
+    color: "#555",
     fontSize: 14,
+  },
+  resendLink: {
+    color: "#D4AF37",
+    fontSize: 15,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  resendDisabled: {
+    color: "#333",
+    textDecorationLine: "none",
+  },
+  footer: {
+    marginTop: 60,
+  },
+  loginLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+  },
+  loginLinkText: {
+    color: "#555",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

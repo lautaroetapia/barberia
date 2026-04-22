@@ -7,11 +7,14 @@ import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
     Alert,
+    FlatList,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 
@@ -25,7 +28,7 @@ import {
     saveOwnerAppointmentsByDate,
     type OwnerAppointment,
 } from "@/lib/owner-agenda";
-import { getOwnerServices } from "@/lib/owner-services";
+import { getOwnerServices, type OwnerService } from "@/lib/owner-services";
 
 const weekDays = [
   "Domingo",
@@ -53,6 +56,131 @@ const monthNames = [
 ];
 
 export default function BarberMyAgendaScreen() {
+  // Estado para modal de agendado manual (debe estar aquí)
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [services, setServices] = useState<OwnerService[]>([]);
+  const [selectedService, setSelectedService] = useState<OwnerService | null>(
+    null,
+  );
+  const [addError, setAddError] = useState<string>("");
+
+  // Cargar servicios al abrir modal
+  const openAddModal = async (time: string) => {
+    setSelectedTime(time);
+    setShowAddModal(true);
+    setAddError("");
+    const loaded = await getOwnerServices();
+    const activeServices = loaded.filter((item) => item.active);
+    setServices(activeServices);
+    setSelectedService(activeServices[0] ?? null);
+    if (!activeServices.length) {
+      setAddError(
+        "No hay servicios activos. Crea un servicio primero para agendar.",
+      );
+    }
+  };
+
+  const timeToMinutes = (time: string) => {
+    const [hhText, mmText] = time.split(":");
+    const hh = Number(hhText);
+    const mm = Number(mmText);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) {
+      return null;
+    }
+    return hh * 60 + mm;
+  };
+
+  const slotsRequired = useMemo(() => {
+    const duration = Number(selectedService?.duration ?? 0);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return 1;
+    }
+    return Math.ceil(duration / 30);
+  }, [selectedService]);
+
+  // Lógica para bloquear turnos según duración
+  const handleAddAppointment = async () => {
+    if (!selectedTime || !selectedService) {
+      setAddError("Selecciona un servicio para continuar.");
+      return;
+    }
+
+    const sortedTimeline = [...timeline].sort((a, b) =>
+      a.time.localeCompare(b.time),
+    );
+    const idx = sortedTimeline.findIndex((item) => item.time === selectedTime);
+    if (idx === -1) {
+      setAddError("Turno base no encontrado.");
+      return;
+    }
+
+    const baseMinute = timeToMinutes(selectedTime);
+    if (baseMinute === null) {
+      setAddError("La hora seleccionada es inválida.");
+      return;
+    }
+
+    const segment = sortedTimeline.slice(idx, idx + slotsRequired);
+    if (segment.length < slotsRequired) {
+      setAddError(
+        "No hay suficientes turnos para cubrir la duración del servicio.",
+      );
+      return;
+    }
+
+    for (let i = 0; i < segment.length; i += 1) {
+      const slot = segment[i];
+      const minute = timeToMinutes(slot.time);
+      const expectedMinute = baseMinute + i * 30;
+
+      if (minute === null || minute !== expectedMinute) {
+        setAddError(
+          "Los turnos deben ser seguidos cada 30 minutos. El bloque seleccionado tiene cortes.",
+        );
+        return;
+      }
+
+      if (slot.status !== "libre") {
+        setAddError("Uno o más turnos del bloque ya están ocupados.");
+        return;
+      }
+    }
+
+    const selectedIds = new Set(segment.map((item) => item.id));
+    const firstId = segment[0]?.id;
+    const updated = timeline.map((item) => {
+      if (!selectedIds.has(item.id)) {
+        return item;
+      }
+
+      if (item.id === firstId) {
+        return {
+          ...item,
+          status: "pendiente",
+          client: "Cliente manual",
+          service: selectedService.serviceName,
+        };
+      }
+
+      return {
+        ...item,
+        status: "bloqueado",
+        client: "Bloqueado",
+        service: `Bloque ${selectedService.serviceName}`,
+      };
+    });
+
+    setTimeline(updated);
+    await saveOwnerAppointmentsByDate(today, updated);
+    setShowAddModal(false);
+    setAddError("");
+    setToast({
+      visible: true,
+      message: `Turno creado: ${selectedService.serviceName} (${slotsRequired} bloques de 30 min).`,
+      type: "success",
+    });
+  };
   const [timeline, setTimeline] = useState<OwnerAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -146,7 +274,10 @@ export default function BarberMyAgendaScreen() {
   );
 
   const scheduledCount = useMemo(
-    () => timeline.filter((item) => item.status !== "libre").length,
+    () =>
+      timeline.filter(
+        (item) => item.status !== "libre" && item.status !== "bloqueado",
+      ).length,
     [timeline],
   );
 
@@ -429,6 +560,88 @@ export default function BarberMyAgendaScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Modal para agendar manualmente */}
+        <Modal visible={showAddModal} transparent animationType="slide">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.7)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 16,
+                padding: 20,
+                width: "90%",
+              }}
+            >
+              <Text
+                style={{ fontWeight: "bold", fontSize: 18, marginBottom: 10 }}
+              >
+                Agendar turno
+              </Text>
+              <Text>Hora: {selectedTime}</Text>
+              <Text style={{ marginTop: 10 }}>Servicio:</Text>
+              <Text style={{ color: "#666", marginBottom: 8 }}>
+                Los turnos se toman en bloques de 30 min. Este servicio ocupará{" "}
+                {slotsRequired} bloque(s).
+              </Text>
+              <FlatList
+                data={services}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => setSelectedService(item)}
+                    style={{
+                      padding: 8,
+                      backgroundColor:
+                        selectedService?.id === item.id ? "#d4af37" : "#eee",
+                      marginVertical: 2,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text>
+                      {item.serviceName} ({item.duration} min)
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                style={{ maxHeight: 120, marginBottom: 10 }}
+              />
+              {addError ? (
+                <Text style={{ color: "red", marginBottom: 8 }}>
+                  {addError}
+                </Text>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                }}
+              >
+                <Pressable
+                  onPress={() => setShowAddModal(false)}
+                  style={{ padding: 10 }}
+                >
+                  <Text>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleAddAppointment}
+                  style={{
+                    backgroundColor: "#d4af37",
+                    padding: 10,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: "#fff" }}>Agendar</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <Text style={styles.dayTitle}>{dayLabel}</Text>
         <Text style={styles.daySubtitle}>
           {scheduledCount} citas programadas
@@ -448,6 +661,23 @@ export default function BarberMyAgendaScreen() {
               : "Sincronizar a calendario"}
           </Text>
         </Pressable>
+        {/* Mostrar los turnos libres con botón para agendar manualmente */}
+        {timeline
+          .filter((a) => a.status === "libre")
+          .map((a) => (
+            <Pressable
+              key={a.id}
+              style={{
+                marginVertical: 4,
+                padding: 10,
+                backgroundColor: "#eee",
+                borderRadius: 8,
+              }}
+              onPress={() => openAddModal(a.time)}
+            >
+              <Text>Agregar turno a las {a.time}</Text>
+            </Pressable>
+          ))}
 
         {isLoading ? (
           <View style={styles.skeletonList}>
@@ -467,102 +697,105 @@ export default function BarberMyAgendaScreen() {
           </View>
         ) : null}
 
-        {timeline.map((item) => (
-          <View
-            key={item.id}
-            style={[
-              styles.card,
-              item.status === "en_progreso" && styles.cardActive,
-            ]}
-          >
-            <Text
+        {timeline.map((item) =>
+          item.status === "bloqueado" ? null : (
+            <View
+              key={item.id}
               style={[
-                styles.time,
-                item.status === "en_progreso" && styles.timeActive,
+                styles.card,
+                item.status === "en_progreso" && styles.cardActive,
               ]}
             >
-              {item.time}
-            </Text>
-            <View style={styles.cardBody}>
-              <Text style={styles.name}>{item.client}</Text>
-              <Text style={styles.service}>{item.service}</Text>
+              <Text
+                style={[
+                  styles.time,
+                  item.status === "en_progreso" && styles.timeActive,
+                ]}
+              >
+                {item.time}
+              </Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.name}>{item.client}</Text>
+                <Text style={styles.service}>{item.service}</Text>
 
-              {item.status === "pendiente" ? (
-                <View style={styles.actionsRow}>
+                {item.status === "pendiente" ? (
+                  <View style={styles.actionsRow}>
+                    <Pressable
+                      style={styles.completeButton}
+                      disabled={isProcessing}
+                      onPress={() => {
+                        void updateAppointmentStatus(item.id, "en_progreso");
+                      }}
+                    >
+                      <Text style={styles.completeText}>Iniciar</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.noShowButton}
+                      disabled={isProcessing}
+                      onPress={() => confirmNoShow(item.id)}
+                    >
+                      <Text style={styles.noShowText}>No asistio</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.deleteButton}
+                      disabled={isProcessing}
+                      onPress={() => confirmDelete(item.id)}
+                    >
+                      <Text style={styles.deleteText}>Eliminar</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {item.status === "en_progreso" ? (
+                  <View style={styles.actionsRow}>
+                    <Pressable
+                      style={styles.completeButton}
+                      disabled={isProcessing}
+                      onPress={() => {
+                        void updateAppointmentStatus(item.id, "completado");
+                      }}
+                    >
+                      <Text style={styles.completeText}>Completar</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.noShowButton}
+                      disabled={isProcessing}
+                      onPress={() => confirmNoShow(item.id)}
+                    >
+                      <Text style={styles.noShowText}>No asistio</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.deleteButton}
+                      disabled={isProcessing}
+                      onPress={() => confirmDelete(item.id)}
+                    >
+                      <Text style={styles.deleteText}>Eliminar</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {item.status === "completado" ||
+                item.status === "no_asistio" ? (
                   <Pressable
-                    style={styles.completeButton}
-                    disabled={isProcessing}
-                    onPress={() => {
-                      void updateAppointmentStatus(item.id, "en_progreso");
-                    }}
-                  >
-                    <Text style={styles.completeText}>Iniciar</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.noShowButton}
-                    disabled={isProcessing}
-                    onPress={() => confirmNoShow(item.id)}
-                  >
-                    <Text style={styles.noShowText}>No asistio</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.deleteButton}
+                    style={styles.deleteButtonStandalone}
                     disabled={isProcessing}
                     onPress={() => confirmDelete(item.id)}
                   >
                     <Text style={styles.deleteText}>Eliminar</Text>
                   </Pressable>
-                </View>
-              ) : null}
+                ) : null}
 
-              {item.status === "en_progreso" ? (
-                <View style={styles.actionsRow}>
-                  <Pressable
-                    style={styles.completeButton}
-                    disabled={isProcessing}
-                    onPress={() => {
-                      void updateAppointmentStatus(item.id, "completado");
-                    }}
-                  >
-                    <Text style={styles.completeText}>Completar</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.noShowButton}
-                    disabled={isProcessing}
-                    onPress={() => confirmNoShow(item.id)}
-                  >
-                    <Text style={styles.noShowText}>No asistio</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.deleteButton}
-                    disabled={isProcessing}
-                    onPress={() => confirmDelete(item.id)}
-                  >
-                    <Text style={styles.deleteText}>Eliminar</Text>
-                  </Pressable>
-                </View>
-              ) : null}
+                {item.status === "completado" ? (
+                  <Text style={styles.statusDone}>Completado</Text>
+                ) : null}
 
-              {item.status === "completado" || item.status === "no_asistio" ? (
-                <Pressable
-                  style={styles.deleteButtonStandalone}
-                  disabled={isProcessing}
-                  onPress={() => confirmDelete(item.id)}
-                >
-                  <Text style={styles.deleteText}>Eliminar</Text>
-                </Pressable>
-              ) : null}
-
-              {item.status === "completado" ? (
-                <Text style={styles.statusDone}>Completado</Text>
-              ) : null}
-
-              {item.status === "no_asistio" ? (
-                <Text style={styles.statusNoShow}>No asistio</Text>
-              ) : null}
+                {item.status === "no_asistio" ? (
+                  <Text style={styles.statusNoShow}>No asistio</Text>
+                ) : null}
+              </View>
             </View>
-          </View>
-        ))}
+          ),
+        )}
       </ScrollView>
 
       <View style={styles.summaryBar}>

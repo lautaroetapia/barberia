@@ -2,81 +2,112 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text, View, Dimensions } from "react-native";
+
+const { width } = Dimensions.get("window");
 
 export default function SplashScreen() {
   const [ready, setReady] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const timeout = setTimeout(() => setReady(true), 1500);
+    // Entrada suave de toda la interfaz
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
 
-    Animated.loop(
+    const timeout = setTimeout(() => setReady(true), 3000);
+
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
           toValue: 1,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1500,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
           useNativeDriver: true,
         }),
         Animated.timing(pulse, {
           toValue: 0,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1500,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
 
-    return () => clearTimeout(timeout);
+    animation.start();
+
+    return () => {
+      clearTimeout(timeout);
+      animation.stop();
+    };
   }, [pulse]);
 
   if (ready) {
     return <Redirect href="/onboarding/step-1" />;
   }
 
-  const glowScale = pulse.interpolate({
+  const iconTranslateY = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.92, 1.08],
+    outputRange: [0, -10],
   });
 
   const glowOpacity = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.18, 0.34],
+    outputRange: [0.1, 0.4],
   });
 
-  const iconScale = pulse.interpolate({
+  const glowScale = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.985, 1.015],
+    outputRange: [1, 1.5],
   });
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.orbitalBackground} pointerEvents="none">
-        <Animated.View
-          style={[
-            styles.backgroundGlow,
-            { opacity: glowOpacity, transform: [{ scale: glowScale }] },
-          ]}
-        />
-      </View>
-      <View style={styles.centerContent}>
-        <View style={styles.logoWrap}>
-          <View style={styles.logoHalo} />
+      
+      <Animated.View style={[styles.centerContent, { opacity: fadeAnim }]}>
+        <View style={styles.iconWrap}>
+          {/* Aura de luz de fondo */}
           <Animated.View
-            style={{ transform: [{ scale: iconScale }, { rotate: "-45deg" }] }}
+            style={[
+              styles.glow,
+              { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+            ]}
+          />
+          
+          {/* Icono Flotante */}
+          <Animated.View
+            style={{ 
+              transform: [
+                { translateY: iconTranslateY }, 
+                { rotate: "-45deg" }
+              ] 
+            }}
           >
-            <MaterialIcons name="content-cut" size={122} color="#d4af37" />
+            <MaterialIcons name="content-cut" size={100} color="#F2CA50" />
           </Animated.View>
         </View>
 
-        <Text style={styles.title}>Navaja Dorada</Text>
-        <View style={styles.divider} />
-      </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>NAVAJA DORADA</Text>
+          <Text style={styles.subtitle}>THE ART OF PRECISION</Text>
+          
+          <View style={styles.dividerContainer}>
+            <View style={styles.line} />
+            <View style={styles.diamond} />
+            <View style={styles.line} />
+          </View>
+        </View>
+      </Animated.View>
 
-      <View style={styles.loadingWrap}>
-        <Text style={styles.loadingText}>Cargando...</Text>
+      <View style={styles.footer}>
+        <Animated.Text style={[styles.loadingText, { opacity: pulse }]}>
+          Iniciando experiencia...
+        </Animated.Text>
       </View>
     </View>
   );
@@ -85,80 +116,72 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0e0e0e",
+    backgroundColor: "#050505", // Negro más profundo para resaltar el oro
     alignItems: "center",
-    justifyContent: "center",
-  },
-  orbitalBackground: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backgroundGlow: {
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: "rgba(212, 175, 55, 0.035)",
-    shadowColor: "#d4af37",
-    shadowOpacity: 0.16,
-    shadowRadius: 90,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 10,
   },
   centerContent: {
     flex: 1,
-    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingTop: 0,
   },
-  logoWrap: {
-    width: 190,
-    height: 190,
+  iconWrap: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 34,
+    marginBottom: 40,
   },
-  logoHalo: {
+  glow: {
     position: "absolute",
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    backgroundColor: "rgba(255, 255, 255, 0.01)",
-    shadowColor: "#111111",
-    shadowOpacity: 0.95,
-    shadowRadius: 54,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 8,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#D4AF37",
+    shadowColor: "#D4AF37",
+    shadowRadius: 50,
+    shadowOpacity: 1,
+    elevation: 20,
+  },
+  textContainer: {
+    alignItems: "center",
   },
   title: {
-    color: "#d4af37",
-    fontSize: 36,
-    lineHeight: 40,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-    textTransform: "uppercase",
+    color: "#F2CA50",
+    fontSize: 42,
+    fontWeight: "900",
+    letterSpacing: -1.5,
     textAlign: "center",
-    marginBottom: 18,
-    textShadowColor: "rgba(212, 175, 55, 0.2)",
-    textShadowOffset: { width: 0, height: 6 },
-    textShadowRadius: 12,
   },
-  divider: {
-    width: 80,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: "#d4af37",
-    opacity: 0.9,
+  subtitle: {
+    color: "rgba(242, 202, 80, 0.4)",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 5,
+    marginTop: 4,
+    marginBottom: 24,
   },
-  loadingWrap: {
-    paddingBottom: 84,
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: width * 0.4,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(212, 175, 55, 0.2)",
+  },
+  diamond: {
+    width: 6,
+    height: 6,
+    backgroundColor: "#D4AF37",
+    transform: [{ rotate: "45deg" }],
+    marginHorizontal: 15,
+  },
+  footer: {
+    paddingBottom: 60,
   },
   loadingText: {
-    color: "rgba(229, 226, 225, 0.6)",
-    fontSize: 13,
-    letterSpacing: 2.8,
+    color: "rgba(255, 255, 255, 0.3)",
+    fontSize: 12,
+    letterSpacing: 3,
     textTransform: "uppercase",
   },
 });

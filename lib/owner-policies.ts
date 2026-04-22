@@ -15,12 +15,6 @@ export type OwnerPolicies = {
   allowNightBookings: boolean;
 };
 
-const defaultPolicies: OwnerPolicies = {
-  freeCancellationHours: "12",
-  noShowPenalty: "20",
-  autoConfirmAppointments: true,
-  allowNightBookings: true,
-};
 
 type DbOwnerPolicies = {
   free_cancellation_hours: number;
@@ -29,33 +23,14 @@ type DbOwnerPolicies = {
   allow_night_bookings: boolean;
 };
 
-const parsePolicies = (raw: string | null): OwnerPolicies => {
+const parsePolicies = (raw: string | null): OwnerPolicies | null => {
   if (!raw) {
-    return defaultPolicies;
+    return null;
   }
-
   try {
-    const parsed = JSON.parse(raw) as Partial<OwnerPolicies>;
-    return {
-      freeCancellationHours:
-        typeof parsed.freeCancellationHours === "string"
-          ? parsed.freeCancellationHours
-          : defaultPolicies.freeCancellationHours,
-      noShowPenalty:
-        typeof parsed.noShowPenalty === "string"
-          ? parsed.noShowPenalty
-          : defaultPolicies.noShowPenalty,
-      autoConfirmAppointments:
-        typeof parsed.autoConfirmAppointments === "boolean"
-          ? parsed.autoConfirmAppointments
-          : defaultPolicies.autoConfirmAppointments,
-      allowNightBookings:
-        typeof parsed.allowNightBookings === "boolean"
-          ? parsed.allowNightBookings
-          : defaultPolicies.allowNightBookings,
-    };
+    return JSON.parse(raw) as OwnerPolicies;
   } catch {
-    return defaultPolicies;
+    return null;
   }
 };
 
@@ -92,17 +67,11 @@ export const getOwnerPolicies = async () => {
 
   const raw = await AsyncStorage.getItem(scopedKey);
   const parsed = parsePolicies(raw);
-  if (raw) {
+  if (parsed) {
     return parsed;
   }
-
-  const legacyRaw = await AsyncStorage.getItem(OWNER_POLICIES_KEY);
-  if (legacyRaw) {
-    await AsyncStorage.setItem(scopedKey, legacyRaw);
-    return parsePolicies(legacyRaw);
-  }
-
-  return defaultPolicies;
+  // Si no hay datos en Supabase ni en cache, retorna vacío
+  return null;
 };
 
 export const saveOwnerPolicies = async (policies: OwnerPolicies) => {

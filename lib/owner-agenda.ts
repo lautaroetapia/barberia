@@ -14,7 +14,8 @@ export type OwnerAppointmentStatus =
   | "en_progreso"
   | "completado"
   | "no_asistio"
-  | "libre";
+  | "libre"
+  | "bloqueado";
 
 export type OwnerAppointment = {
   id: string;
@@ -61,37 +62,6 @@ const getDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const defaultAppointments: OwnerAppointment[] = [
-  {
-    id: "ap-1",
-    time: "09:00",
-    client: "Martin Rodriguez",
-    service: "Corte Premium",
-    status: "pendiente",
-  },
-  {
-    id: "ap-2",
-    time: "10:30",
-    client: "Diego Torres",
-    service: "Corte y Barba",
-    status: "pendiente",
-  },
-  {
-    id: "ap-3",
-    time: "11:00",
-    client: "Disponible",
-    service: "Slot libre",
-    status: "libre",
-  },
-  {
-    id: "ap-4",
-    time: "11:30",
-    client: "Carlos Gomez",
-    service: "Perfilado de Barba",
-    status: "pendiente",
-  },
-];
-
 const parseMap = (raw: string | null) => {
   if (!raw) {
     return {} as OwnerAppointmentsByDate;
@@ -128,6 +98,10 @@ const toDbStatus = (status: OwnerAppointmentStatus): DbAppointmentStatus => {
 
   if (status === "no_asistio") {
     return "no_show";
+  }
+
+  if (status === "bloqueado") {
+    return "confirmed";
   }
 
   return "confirmed";
@@ -260,7 +234,7 @@ const syncAppointmentsToSupabase = async (
   removedAppointmentIds: string[],
 ) => {
   const nonFreeAppointments = appointments.filter(
-    (item) => item.status !== "libre",
+    (item) => item.status !== "libre" && item.status !== "bloqueado",
   );
   if (!nonFreeAppointments.length && !removedAppointmentIds.length) {
     return;
@@ -541,19 +515,7 @@ export const getOwnerAppointmentsByDate = async (date: Date) => {
   const map = parseMap(raw);
   const key = getDateKey(date);
 
-  if (!map[key]?.length) {
-    const legacyRaw = await AsyncStorage.getItem(OWNER_APPOINTMENTS_KEY);
-    const legacyMap = parseMap(legacyRaw);
-    if (legacyMap[key]?.length) {
-      map[key] = legacyMap[key];
-      await persistMap(map);
-      return map[key] ?? [];
-    }
-
-    map[key] = defaultAppointments;
-    await persistMap(map);
-  }
-
+  // Si no hay datos en Supabase ni en cache, retorna vacío
   return map[key] ?? [];
 };
 

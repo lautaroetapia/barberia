@@ -1,14 +1,15 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
@@ -30,39 +31,25 @@ export default function OwnerPoliciesScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadPolicies = async () => {
       const policies = await getOwnerPolicies();
-      if (!isMounted) {
-        return;
-      }
-
+      if (!isMounted) return;
       setFreeCancellationHours(policies.freeCancellationHours);
       setNoShowPenalty(policies.noShowPenalty);
       setAutoConfirmAppointments(policies.autoConfirmAppointments);
       setAllowNightBookings(policies.allowNightBookings);
       setIsLoading(false);
     };
-
     void loadPolicies();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const handleSave = async () => {
-    if (!Number(freeCancellationHours) || !Number(noShowPenalty)) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Las horas y penalizacion deben ser numericas.",
-      });
+    if (!Number(freeCancellationHours) && freeCancellationHours !== "0") {
+      setToast({ visible: true, type: "error", message: "Ingresa un número de horas válido." });
       return;
     }
-
     setIsSaving(true);
-
     try {
       await saveOwnerPolicies({
         freeCancellationHours,
@@ -70,11 +57,7 @@ export default function OwnerPoliciesScreen() {
         autoConfirmAppointments,
         allowNightBookings,
       });
-      setToast({
-        visible: true,
-        type: "success",
-        message: "Politicas guardadas",
-      });
+      setToast({ visible: true, type: "success", message: "Políticas actualizadas correctamente" });
     } finally {
       setIsSaving(false);
     }
@@ -90,86 +73,100 @@ export default function OwnerPoliciesScreen() {
       />
 
       <View style={styles.topBar}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.replace("/barber/owner-more-settings")}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Feather name="chevron-left" size={26} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>Politicas</Text>
-        <View style={styles.iconButton} />
+        <Text style={styles.brand}>Políticas de Reserva</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {isLoading ? (
-          <Text style={styles.loadingText}>Cargando politicas...</Text>
-        ) : null}
+          <ActivityIndicator color="#d4af37" style={{ marginTop: 20 }} />
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Cancelaciones y Penalizaciones</Text>
+            
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Feather name="clock" size={18} color="#d4af37" />
+                <Text style={styles.label}>Cancelación gratuita</Text>
+              </View>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  value={freeCancellationHours}
+                  onChangeText={setFreeCancellationHours}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#444"
+                />
+                <Text style={styles.inputSuffix}>Horas antes</Text>
+              </View>
+              <Text style={styles.labelHint}>Tiempo límite para cancelar sin que se apliquen cargos al cliente.</Text>
+            </View>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Horas de cancelacion sin costo</Text>
-          <TextInput
-            value={freeCancellationHours}
-            onChangeText={setFreeCancellationHours}
-            style={styles.input}
-            keyboardType="numeric"
-          />
-        </View>
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Feather name="alert-circle" size={18} color="#d4af37" />
+                <Text style={styles.label}>Multa por No-Show</Text>
+              </View>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  value={noShowPenalty}
+                  onChangeText={setNoShowPenalty}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#444"
+                />
+                <Text style={styles.inputSuffix}>% del servicio</Text>
+              </View>
+              <Text style={styles.labelHint}>Porcentaje sugerido a cobrar si el cliente no se presenta.</Text>
+            </View>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Penalizacion por no show (%)</Text>
-          <TextInput
-            value={noShowPenalty}
-            onChangeText={setNoShowPenalty}
-            style={styles.input}
-            keyboardType="numeric"
-          />
-        </View>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Automatización y Horarios</Text>
 
-        <View style={styles.cardRow}>
-          <View style={styles.cardRowText}>
-            <Text style={styles.labelTitle}>Confirmacion automatica</Text>
-            <Text style={styles.labelHint}>
-              Confirma turnos nuevos automaticamente
-            </Text>
-          </View>
-          <Switch
-            value={autoConfirmAppointments}
-            onValueChange={setAutoConfirmAppointments}
-            trackColor={{ true: "#d4af37", false: "#4d4635" }}
-            thumbColor="#fff"
-          />
-        </View>
+            <View style={styles.cardRow}>
+              <View style={styles.cardRowText}>
+                <Text style={styles.labelTitle}>Auto-confirmación</Text>
+                <Text style={styles.labelHint}>Acepta turnos sin intervención manual.</Text>
+              </View>
+              <Switch
+                value={autoConfirmAppointments}
+                onValueChange={setAutoConfirmAppointments}
+                trackColor={{ true: "#d4af37", false: "#2a2a2a" }}
+                thumbColor="#fff"
+              />
+            </View>
 
-        <View style={styles.cardRow}>
-          <View style={styles.cardRowText}>
-            <Text style={styles.labelTitle}>Permitir turnos nocturnos</Text>
-            <Text style={styles.labelHint}>
-              Habilita reservas en franja noche
-            </Text>
-          </View>
-          <Switch
-            value={allowNightBookings}
-            onValueChange={setAllowNightBookings}
-            trackColor={{ true: "#d4af37", false: "#4d4635" }}
-            thumbColor="#fff"
-          />
-        </View>
+            <View style={styles.cardRow}>
+              <View style={styles.cardRowText}>
+                <Text style={styles.labelTitle}>Reservas Nocturnas</Text>
+                <Text style={styles.labelHint}>Permite turnos fuera del horario estándar.</Text>
+              </View>
+              <Switch
+                value={allowNightBookings}
+                onValueChange={setAllowNightBookings}
+                trackColor={{ true: "#d4af37", false: "#2a2a2a" }}
+                thumbColor="#fff"
+              />
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
         <Pressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          onPress={() => {
-            void handleSave();
-          }}
+          onPress={handleSave}
           disabled={isSaving || isLoading}
         >
-          <Text style={styles.saveButtonText}>
-            {isSaving ? "Guardando..." : "Guardar politicas"}
-          </Text>
+          {isSaving ? (
+            <ActivityIndicator color="#1a1a1a" size="small" />
+          ) : (
+            <Text style={styles.saveButtonText}>Actualizar Políticas</Text>
+          )}
         </Pressable>
       </View>
 
@@ -179,92 +176,103 @@ export default function OwnerPoliciesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#0c0c0c" },
   topBar: {
-    height: 70,
+    height: 100,
+    paddingTop: 40,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
+    backgroundColor: "#0c0c0c",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#151515",
     alignItems: "center",
     justifyContent: "center",
   },
-  brand: {
-    color: "#d4af37",
-    fontSize: 20,
-    fontWeight: "800",
-  },
+  brand: { color: "#fff", fontSize: 18, fontWeight: "800" },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 180,
-    gap: 12,
+    paddingTop: 10,
+    paddingBottom: 220,
   },
-  loadingText: { color: "#99907c", fontSize: 12, textAlign: "center" },
-  card: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
-    gap: 8,
-  },
-  label: {
-    color: "#d0c5af",
+  sectionTitle: {
+    color: "#d4af37",
     fontSize: 12,
+    fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  card: {
+    borderRadius: 20,
+    backgroundColor: "#151515",
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#222",
+    marginBottom: 12,
+  },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  label: { color: "#eee", fontSize: 14, fontWeight: "700" },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0c0c0c",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   input: {
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    color: "#e5e2e1",
-    paddingHorizontal: 12,
+    flex: 1,
+    height: 48,
+    color: "#d4af37",
+    fontSize: 18,
+    fontWeight: "700",
   },
+  inputSuffix: { color: "#666", fontSize: 13, fontWeight: "600" },
+  labelHint: { color: "#777", fontSize: 12, lineHeight: 18 },
+  
   cardRow: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
+    borderRadius: 20,
+    backgroundColor: "#151515",
+    padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
+    borderColor: "#222",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    marginBottom: 12,
   },
-  cardRowText: { flex: 1 },
-  labelTitle: { color: "#e5e2e1", fontSize: 15, fontWeight: "700" },
-  labelHint: { color: "#99907c", fontSize: 12, marginTop: 2 },
+  cardRowText: { flex: 1, paddingRight: 10 },
+  labelTitle: { color: "#eee", fontSize: 15, fontWeight: "700" },
+
   footer: {
     position: "absolute",
+    bottom: 80,
     left: 0,
     right: 0,
-    bottom: 74,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 22,
-    backgroundColor: "rgba(14,14,14,0.96)",
+    padding: 20,
+    backgroundColor: "rgba(12,12,12,0.9)",
   },
   saveButton: {
-    minHeight: 52,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#d4af37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  saveButtonDisabled: { opacity: 0.7 },
-  saveButtonText: {
-    color: "#241a00",
-    fontSize: 15,
-    fontWeight: "800",
-  },
+  saveButtonDisabled: { opacity: 0.5 },
+  saveButtonText: { color: "#000", fontSize: 16, fontWeight: "800" },
 });

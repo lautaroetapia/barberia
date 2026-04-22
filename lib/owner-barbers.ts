@@ -48,26 +48,6 @@ type DbInvitation = {
   expires_at: string;
 };
 
-const defaultBarbers: OwnerBarber[] = [
-  {
-    id: "barber-1",
-    name: "Mateo R.",
-    specialty: "Corte Clasico y Barba",
-    active: true,
-  },
-  {
-    id: "barber-2",
-    name: "Lucas G.",
-    specialty: "Diseno y Fade",
-    active: true,
-  },
-];
-
-const defaultRequests: OwnerBarberRequest[] = [
-  { id: "req-1", name: "Ezequiel T." },
-  { id: "req-2", name: "Carlos Perez" },
-];
-
 const parseJson = <T>(raw: string | null, fallback: T): T => {
   if (!raw) {
     return fallback;
@@ -167,16 +147,8 @@ export const getOwnerBarbers = async (user?: User | null) => {
   if (parsed.length) {
     return parsed;
   }
-
-  const legacyRaw = await AsyncStorage.getItem(OWNER_BARBERS_KEY);
-  const legacyParsed = parseJson<OwnerBarber[]>(legacyRaw, []);
-  if (legacyParsed.length) {
-    await AsyncStorage.setItem(barbersKey, JSON.stringify(legacyParsed));
-    return legacyParsed;
-  }
-
-  await AsyncStorage.setItem(barbersKey, JSON.stringify(defaultBarbers));
-  return defaultBarbers;
+  // Si no hay datos en Supabase ni en cache, retorna vacío
+  return [];
 };
 
 export const saveOwnerBarbers = async (
@@ -190,28 +162,55 @@ export const saveOwnerBarbers = async (
     if (authUser?.id) {
       const shopId = await getOwnerPrimaryBarbershopId(authUser.id);
       if (shopId) {
+        const { data: existingRows } = await supabase
+          .from("barbers")
+          .select("id, user_id")
+          .eq("barbershop_id", shopId)
+          .returns<Array<{ id: string; user_id: string }>>();
+
+        const existingByUserId = new Map(
+          (existingRows ?? []).map((row) => [row.user_id, row]),
+        );
+
         const syncable = barbers.filter(
           (item) => item.accountUserId && isUuid(item.accountUserId),
         );
 
+        const incomingUserIds = new Set(
+          syncable.map((item) => item.accountUserId as string),
+        );
+
+        const toDelete = (existingRows ?? []).filter(
+          (row) => !incomingUserIds.has(row.user_id),
+        );
+
+        if (toDelete.length) {
+          await supabase
+            .from("barbers")
+            .delete()
+            .eq("barbershop_id", shopId)
+            .in(
+              "id",
+              toDelete.map((row) => row.id),
+            );
+        }
+
         if (syncable.length) {
           await Promise.all(
             syncable.map(async (item) => {
-              const { data: existing } = await supabase
-                .from("barbers")
-                .select("id")
-                .eq("barbershop_id", shopId)
-                .eq("user_id", item.accountUserId as string)
-                .maybeSingle<{ id: string }>();
+              const existing = existingByUserId.get(
+                item.accountUserId as string,
+              );
 
-              if (existing?.id) {
+              if (existing) {
                 await supabase
                   .from("barbers")
                   .update({
                     specialty: item.specialty,
                     status: item.active ? "active" : "inactive",
                   })
-                  .eq("id", existing.id);
+                  .eq("id", existing.id)
+                  .eq("barbershop_id", shopId);
               } else {
                 await supabase.from("barbers").insert({
                   barbershop_id: shopId,
@@ -286,8 +285,8 @@ export const getOwnerBarberRequests = async (user?: User | null) => {
     return legacyParsed;
   }
 
-  await AsyncStorage.setItem(requestsKey, JSON.stringify(defaultRequests));
-  return defaultRequests;
+  // Si no hay datos en Supabase ni en cache, retorna vacío
+  return [];
 };
 
 export const saveOwnerBarberRequests = async (

@@ -20,28 +20,6 @@ export type OwnerService = {
   active: boolean;
 };
 
-const defaultServices: OwnerService[] = [
-  {
-    id: "svc-1",
-    serviceName: "Corte Imperial",
-    category: "Cabello",
-    description: "Corte premium con asesoria, lavado y peinado final.",
-    price: "45",
-    duration: "45",
-    featured: true,
-    active: true,
-  },
-  {
-    id: "svc-2",
-    serviceName: "Barba Premium",
-    category: "Barba",
-    description: "Perfilado, toalla caliente y finalizacion con aceites.",
-    price: "30",
-    duration: "30",
-    featured: false,
-    active: true,
-  },
-];
 
 const parseServices = (raw: string | null) => {
   if (!raw) {
@@ -63,6 +41,30 @@ type DbService = {
   duration_minutes: number;
   is_active: boolean;
 };
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isUuid = (value: string) => UUID_REGEX.test(value);
+
+const toPositiveNumber = (value: string, fallback: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return parsed > 0 ? parsed : fallback;
+};
+
+const mapDbServiceToOwnerService = (service: DbService): OwnerService => ({
+  id: service.id,
+  serviceName: service.name,
+  category: "General",
+  description: service.description ?? "",
+  price: String(service.price),
+  duration: String(service.duration_minutes),
+  featured: false,
+  active: service.is_active,
+});
 
 const resolveAuthUser = async () => {
   const { data } = await supabase.auth.getUser();
@@ -124,40 +126,15 @@ export const getOwnerServices = async () => {
         .returns<DbService[]>();
 
       if (!error && data) {
-        const mapped: OwnerService[] = data.map((service) => ({
-          id: service.id,
-          serviceName: service.name,
-          category: "General",
-          description: service.description ?? "",
-          price: String(service.price),
-          duration: String(service.duration_minutes),
-          featured: false,
-          active: service.is_active,
-        }));
-
-        if (mapped.length) {
-          await AsyncStorage.setItem(scopedKey, JSON.stringify(mapped));
-          return mapped;
-        }
+        const mapped = data.map(mapDbServiceToOwnerService);
+        await AsyncStorage.setItem(scopedKey, JSON.stringify(mapped));
+        return mapped;
       }
     }
   }
 
   const raw = await AsyncStorage.getItem(scopedKey);
   const parsed = parseServices(raw);
-
-  if (!parsed.length) {
-    const legacyRaw = await AsyncStorage.getItem(OWNER_SERVICES_KEY);
-    const legacyParsed = parseServices(legacyRaw);
-
-    if (legacyParsed.length) {
-      await AsyncStorage.setItem(scopedKey, JSON.stringify(legacyParsed));
-      return legacyParsed;
-    }
-
-    await AsyncStorage.setItem(scopedKey, JSON.stringify(defaultServices));
-    return defaultServices;
-  }
 
   return parsed;
 };
@@ -170,22 +147,133 @@ export const saveOwnerServices = async (services: OwnerService[]) => {
     const shopId = await getPrimaryBarbershopId(user);
 
     if (shopId) {
-      await supabase.from("services").delete().eq("barbershop_id", shopId);
+      const { data: existingRows, error: existingError } = await supabase
+        .from("services")
+        .select("id")
+        .eq("barbershop_id", shopId)
+        .returns<Array<{ id: string }>>();
 
-      const rows = services.map((service) => ({
-        barbershop_id: shopId,
-        name: service.serviceName,
-        description: service.description || null,
-        price: Number(service.price) || 0,
-        duration_minutes: Number(service.duration) || 30,
-        is_active: service.active,
-      }));
-
-      if (rows.length) {
-        await supabase.from("services").insert(rows);
+      if (existingError) {
+        throw existingError;
       }
+
+      const existingIds = new Set((existingRows ?? []).map((item) => item.id));
+      const incomingPersistedIds = new Set(
+        services.map((item) => item.id).filter((id) => isUuid(id)),
+      );
+
+      const toDelete = [...existingIds].filter(
+        (id) => !incomingPersistedIds.has(id),
+      );
+
+      if (toDelete.length) {
+        const { error: deleteError } = await supabase
+          .from("services")
+          .delete()
+          .in("id", toDelete)
+          .eq("barbershop_id", shopId);
+
+        if (deleteError) {
+          throw deleteError;
+        }
+      }
+
+      const toUpdate = services.filter(
+        (service) => isUuid(service.id) && existingIds.has(service.id),
+      );
+
+      if (toUpdate.length) {
+        const updateOps = toUpdate.map((service) =>
+          supabase
+            .from("services")
+            .update({
+              name: service.serviceName,
+              description: service.description || null,
+              price: toPositiveNumber(service.price, 1),
+              duration_minutes: Math.round(
+                toPositiveNumber(service.duration, 30),
+              ),
+              is_active: service.active,
+            })
+            .eq("id", service.id)
+            .eq("barbershop_id", shopId),
+        );
+
+        const updateResults = await Promise.all(updateOps);
+        const failedUpdate = updateResults.find((result) => result.error);
+        if (failedUpdate?.error) {
+          throw failedUpdate.error;
+        }
+      }
+
+      const toInsert = services.filter(
+        (service) => !isUuid(service.id) || !existingIds.has(service.id),
+      );
+
+      let insertedRows: DbService[] = [];
+      if (toInsert.length) {
+        const { data, error: insertError } = await supabase
+          .from("services")
+          .insert(
+            toInsert.map((service) => ({
+              barbershop_id: shopId,
+              name: service.serviceName,
+              description: service.description || null,
+              price: toPositiveNumber(service.price, 1),
+              duration_minutes: Math.round(
+                toPositiveNumber(service.duration, 30),
+              ),
+              is_active: service.active,
+            })),
+          )
+          .select("id, name, description, price, duration_minutes, is_active")
+          .returns<DbService[]>();
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        insertedRows = data ?? [];
+      }
+
+      let insertCursor = 0;
+      const persisted = services.map((service) => {
+        if (isUuid(service.id) && existingIds.has(service.id)) {
+          return {
+            ...service,
+            price: String(toPositiveNumber(service.price, 1)),
+            duration: String(
+              Math.round(toPositiveNumber(service.duration, 30)),
+            ),
+          };
+        }
+
+        const inserted = insertedRows[insertCursor];
+        insertCursor += 1;
+        if (!inserted) {
+          return {
+            ...service,
+            price: String(toPositiveNumber(service.price, 1)),
+            duration: String(
+              Math.round(toPositiveNumber(service.duration, 30)),
+            ),
+          };
+        }
+
+        return {
+          ...service,
+          id: inserted.id,
+          price: String(inserted.price),
+          duration: String(inserted.duration_minutes),
+          active: inserted.is_active,
+        };
+      });
+
+      await AsyncStorage.setItem(scopedKey, JSON.stringify(persisted));
+      return persisted;
     }
   }
 
   await AsyncStorage.setItem(scopedKey, JSON.stringify(services));
+  return services;
 };

@@ -1,34 +1,61 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function RegisterBarbershopSuccessScreen() {
   return (
     <View style={styles.screen}>
-      <View style={styles.card}>
-        <View style={styles.iconWrap}>
-          <MaterialIcons name="check-circle" size={46} color="#f2ca50" />
+      {/* Efectos de luz de fondo */}
+      <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
+
+      <View style={styles.container}>
+        {/* Animación visual del Icono */}
+        <View style={styles.iconContainer}>
+          <View style={styles.iconRingOuter}>
+            <View style={styles.iconRingInner}>
+              <MaterialIcons name="check" size={48} color="#d4af37" />
+            </View>
+          </View>
         </View>
 
-        <Text style={styles.title}>Barberia creada</Text>
-        <Text style={styles.subtitle}>
-          Tu perfil de dueno ya esta listo para administrar agenda, barberos y
-          servicios.
-        </Text>
+        {/* Textos */}
+        <View style={styles.textStack}>
+          <Text style={styles.title}>¡NEGOCIO LISTO!</Text>
+          <Text style={styles.subtitle}>
+            Tu barbería ha sido registrada con éxito. Ahora tienes acceso total
+            a las herramientas de administración.
+          </Text>
+        </View>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.replace("/barber/dashboard-owner")}
-        >
-          <Text style={styles.primaryButtonText}>Ir al panel de dueno</Text>
-        </Pressable>
+        {/* Acciones */}
+        <View style={styles.buttonStack}>
+          <LinearGradient
+            colors={["#d4af37", "#b8962e"]}
+            style={styles.primaryGradient}
+          >
+            <Pressable
+              style={styles.primaryButton}
+              onPress={() => router.replace("/barber/dashboard-owner")}
+            >
+              <Text style={styles.primaryButtonText}>IR AL PANEL DE DUEÑO</Text>
+              <MaterialIcons name="dashboard" size={18} color="#241a00" />
+            </Pressable>
+          </LinearGradient>
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => router.replace("/(tabs)/profile")}
-        >
-          <Text style={styles.secondaryButtonText}>Volver a mi perfil</Text>
-        </Pressable>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => router.replace("/(tabs)/profile")}
+          >
+            <Text style={styles.secondaryButtonText}>Volver a mi perfil</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.brandFooter}>
+          <Text style={styles.brandText}>NAVAJA DORADA</Text>
+          <View style={styles.brandLine} />
+        </View>
       </View>
     </View>
   );
@@ -37,69 +64,128 @@ export default function RegisterBarbershopSuccessScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#131313",
+    backgroundColor: "#0A0A0A",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
   },
-  card: {
-    width: "100%",
-    borderRadius: 16,
-    backgroundColor: "#1c1b1b",
+  glowTop: {
+    position: "absolute",
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(212, 175, 55, 0.07)",
+  },
+  glowBottom: {
+    position: "absolute",
+    bottom: -80,
+    left: -80,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "rgba(212, 175, 55, 0.05)",
+  },
+  container: {
+    width: "85%",
+    alignItems: "center",
+    gap: 40,
+  },
+  iconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconRingOuter: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    paddingVertical: 26,
-    paddingHorizontal: 18,
+    borderColor: "rgba(212, 175, 55, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconRingInner: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#161616",
+    borderWidth: 2,
+    borderColor: "#d4af37",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#d4af37",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  textStack: {
     alignItems: "center",
     gap: 12,
   },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(212,175,55,0.12)",
-  },
   title: {
-    color: "#e5e2e1",
-    fontSize: 28,
-    fontWeight: "800",
+    color: "#FFF",
+    fontSize: 26,
+    fontWeight: "900",
     textAlign: "center",
+    letterSpacing: 2,
   },
   subtitle: {
-    color: "#d0c5af",
-    fontSize: 14,
-    lineHeight: 21,
+    color: "#888",
+    fontSize: 15,
+    lineHeight: 24,
     textAlign: "center",
+    paddingHorizontal: 10,
+  },
+  buttonStack: {
+    width: "100%",
+    gap: 16,
+  },
+  primaryGradient: {
+    borderRadius: 16,
+    overflow: "hidden",
   },
   primaryButton: {
-    marginTop: 10,
-    minHeight: 52,
-    width: "100%",
-    borderRadius: 12,
-    backgroundColor: "#d4af37",
+    height: 60,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
   },
   primaryButtonText: {
-    color: "#241a00",
-    fontSize: 15,
-    fontWeight: "800",
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   secondaryButton: {
-    minHeight: 48,
-    width: "100%",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.32)",
+    height: 55,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#252423",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#222",
   },
   secondaryButtonText: {
-    color: "#d0c5af",
+    color: "#777",
     fontSize: 14,
     fontWeight: "700",
+  },
+  brandFooter: {
+    marginTop: 20,
+    alignItems: "center",
+    opacity: 0.4,
+  },
+  brandText: {
+    color: "#d4af37",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 5,
+  },
+  brandLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: "#d4af37",
+    marginTop: 8,
   },
 });

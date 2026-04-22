@@ -1,12 +1,15 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import type { User } from "@supabase/supabase-js";
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
     Modal,
+    Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     View,
@@ -17,10 +20,7 @@ import { getFavoriteBarbers, toggleFavoriteBarber } from "@/lib/favorites";
 import { supabase } from "@/lib/supabase";
 
 const getDisplayName = (user: User | null) => {
-  if (!user) {
-    return "Cliente";
-  }
-
+  if (!user) return "Usuario";
   const displayNameFromMeta =
     user.user_metadata?.display_name ??
     user.user_metadata?.full_name ??
@@ -30,12 +30,8 @@ const getDisplayName = (user: User | null) => {
   if (typeof displayNameFromMeta === "string" && displayNameFromMeta.trim()) {
     return displayNameFromMeta.trim();
   }
-
-  if (user.email) {
-    return user.email.split("@")[0] ?? "Cliente";
-  }
-
-  return "Cliente";
+  if (user.email) return user.email;
+  return "Usuario";
 };
 
 export default function HomeScreen() {
@@ -43,50 +39,47 @@ export default function HomeScreen() {
   const [isHomeLoading, setIsHomeLoading] = useState(true);
   const [showNextTurnCard, setShowNextTurnCard] = useState(true);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [favoriteBarberIds, setFavoriteBarberIds] = useState<string[]>([]);
   const [notificationsModalVisible, setNotificationsModalVisible] =
     useState(false);
-  const [favoriteBarberIds, setFavoriteBarberIds] = useState<string[]>([]);
+
+  const [featuredBarbers, setFeaturedBarbers] = useState([]);
+  const [isBarbersLoading, setIsBarbersLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadBarbers = async () => {
+      setIsBarbersLoading(true);
+      try {
+        const barbers =
+          await require("@/lib/booking-catalog").getFeaturedBarbers();
+        if (isMounted) setFeaturedBarbers(barbers);
+      } finally {
+        if (isMounted) setIsBarbersLoading(false);
+      }
+    };
+    loadBarbers();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-
       const loadFavorites = async () => {
         const favorites = await getFavoriteBarbers();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setFavoriteBarberIds(favorites.map((item) => item.id));
+        if (isMounted) setFavoriteBarberIds(favorites.map((item) => item.id));
       };
-
       void loadFavorites();
-
       return () => {
         isMounted = false;
       };
     }, []),
   );
 
-  const notifications = [
-    {
-      id: "1",
-      title: "Recordatorio de turno",
-      body: "Tu proximo turno es el 15 Oct a las 10:30 AM.",
-      time: "Hace 2 h",
-    },
-    {
-      id: "2",
-      title: "Promocion activa",
-      body: "Esta semana tienes 10% OFF en corte + barba.",
-      time: "Ayer",
-    },
-  ];
-
   useEffect(() => {
     let isMounted = true;
-
     const applyUserData = (user: User | null) => {
       setDisplayName(getDisplayName(user));
     };
@@ -94,30 +87,22 @@ export default function HomeScreen() {
     supabase.auth
       .getUser()
       .then(({ data }) => {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          applyUserData(data.user ?? null);
+          setIsHomeLoading(false);
         }
-
-        applyUserData(data.user ?? null);
-        setIsHomeLoading(false);
       })
       .catch(() => {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          applyUserData(null);
+          setIsHomeLoading(false);
         }
-
-        applyUserData(null);
-        setIsHomeLoading(false);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) {
-        return;
-      }
-
-      applyUserData(session?.user ?? null);
+      if (isMounted) applyUserData(session?.user ?? null);
     });
 
     return () => {
@@ -126,297 +111,207 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const featuredBarbers = [
-    {
-      id: "1",
-      barberId: "barber-mateo",
-      name: "Mateo",
-      role: "Master Barber",
-      branch: "Atelier Palermo",
-      shopId: "shop-1",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuArBcyyrUmsG-RrzPKo-y7lWSVmTZZitta3L4K2EKrKLllgTDFQ-vCxvX9fuFYV7bLwCVDc0x8mQXnSkLApvH5qVzVBZEKOfZ7dnjLWTd66WEEztQrkqxJZ0DqqFFozFw_7gvIPuKibDtgd3S9qf5ZHLEYQDW1UUea4yWaXNEvO8vRi-FBc1dX5Kov2jQE9rM4-iSL4fQllOXJkQOkMZjXpa74GxotlqP9YqhXxbZb1pmGtqpyywzZ4xQ7o_O-zNHBK1uczsk4Gnj9R",
-      featured: true,
-    },
-    {
-      id: "2",
-      barberId: "barber-julian",
-      name: "Julian",
-      role: "Experto en Barba",
-      branch: "Atelier Palermo",
-      shopId: "shop-1",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCLAEqJ3muO7atMDm6-C9wVeO-iqCnlSAPEcglWhQhTsWTsAFoEIAvrbIjg_ZLN9VAPSyhGl327AEvxC6RNfuveiZArbZBOwa0i5e1rlmYHVZMLimA7_mGKoL8S0g8m7TdPwQNVgprwcbaPHwJn8Bdw4GvFLxJMUXRZY5GVc_aeI-rkuYUQGq7F6WdvHXT2KcosX0Tf0k0BsokedtoWZAjE7mtMAwOs6vgIc1FhXqxzrQ8R8eIU-XRPGMCoN_uNwh10eNKVkQOYdVBR",
-      featured: false,
-    },
-    {
-      id: "3",
-      barberId: "barber-lucas",
-      name: "Enzo",
-      role: "Corte Clasico",
-      branch: "Atelier Belgrano",
-      shopId: "shop-2",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDGsasiihcc7rMarO3IyXCEilyMyuL04ZmAih17eKroXiHVKv1Vk3zx1o-ALy2OMB5SARlXZcTnmg_4-ipf8ktrH7YL9e1Vuyrj8r5mrNogd9fRPDv32jFwZnbAxcF5nWb_CfDlf_FyRAQpuvWYrzAQPcdL8lAEdEme3BRdmQnTO904dNfew8Uywkt_iGRPS4FkbFXXoNYDUyb6oPG5EpCYfeV98nC5rw94_F-Fp3sAHVRSSdXIynppClCvRhJt1cB-QLwAJArEneWJ",
-      featured: false,
-    },
-  ];
-
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <Text style={styles.brandTitle}>NAVAJA DORADA</Text>
-          {isHomeLoading ? (
-            <Skeleton style={styles.greetingSkeleton} borderRadius={6} />
-          ) : (
-            <Text style={styles.greeting}>Hola, {displayName}</Text>
-          )}
-        </View>
-
-        <View style={styles.headerActions}>
-          <Pressable
-            style={styles.notificationButton}
-            onPress={() => router.push("/(tabs)/favorites")}
-          >
-            <MaterialIcons name="favorite" size={20} color="#f2ca50" />
-          </Pressable>
-
-          <Pressable
-            style={styles.notificationButton}
-            onPress={() => setNotificationsModalVisible(true)}
-          >
-            <MaterialIcons name="notifications" size={20} color="#f2ca50" />
-            {notifications.length ? (
-              <View style={styles.notificationDot} />
-            ) : null}
-          </Pressable>
-        </View>
-      </View>
+      <StatusBar barStyle="light-content" />
 
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tu proximo turno</Text>
-
-          {isHomeLoading ? (
-            <View style={styles.nextTurnCardSkeleton}>
-              <View style={styles.leftAccent} />
-              <View style={styles.nextTurnTopRow}>
-                <View style={styles.nextTurnTextSkeletonWrap}>
-                  <Skeleton style={styles.serviceTitleSkeleton} />
-                  <Skeleton style={styles.dateSkeleton} />
-                </View>
-
-                <View style={styles.barberBadgeSkeleton}>
-                  <Skeleton style={styles.badgeAvatar} borderRadius={14} />
-                  <Skeleton style={styles.badgeNameSkeleton} borderRadius={6} />
-                </View>
-              </View>
-
-              <View style={styles.turnActionsRow}>
-                <Skeleton style={styles.actionButtonSkeleton} />
-                <Skeleton style={styles.actionButtonSkeleton} />
-              </View>
+        {/* --- HEADER REDISEÑADO --- */}
+        <View style={styles.header}>
+          {/* Fila superior: Marca e Iconos */}
+          <View style={styles.headerTopRow}>
+            <Text style={styles.brandTitle}>
+              NAVAJA <Text style={styles.goldText}>DORADA</Text>
+            </Text>
+            <View style={styles.headerActions}>
+              <Pressable
+                style={styles.iconCircle}
+                onPress={() => router.push("/(tabs)/favorites")}
+              >
+                <MaterialIcons
+                  name="favorite-border"
+                  size={18}
+                  color="#D4AF37"
+                />
+              </Pressable>
+              <Pressable
+                style={styles.iconCircle}
+                onPress={() => setNotificationsModalVisible(true)}
+              >
+                <MaterialIcons
+                  name="notifications-none"
+                  size={20}
+                  color="#D4AF37"
+                />
+                <View style={styles.notificationDot} />
+              </Pressable>
             </View>
-          ) : showNextTurnCard ? (
-            <View style={styles.nextTurnCard}>
-              <View style={styles.leftAccent} />
+          </View>
 
-              <View style={styles.nextTurnTopRow}>
-                <View>
-                  <Text style={styles.serviceTitle}>Corte Atelier</Text>
-                  <View style={styles.dateRow}>
-                    <MaterialIcons
-                      name="calendar-today"
-                      size={14}
-                      color="#d0c5af"
-                    />
-                    <Text style={styles.dateText}>15 Oct, 10:30 AM</Text>
-                  </View>
-                </View>
-
-                <View style={styles.barberBadge}>
-                  <Image
-                    source={{
-                      uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuApM6kbXFa4PcgRJQRB7p-JfBdL0DaX53ssvglgFwYNfyAWo25lbX33-nsZOisb050oKn0-JEBNbwrPMPWVD04vT2DoT0VKiaHM7bugI50OyuRS06UWnGbFsgysG8yDC-484hGpUlsF9wjA029ki__gODuIehuc-tSQx24hOr8REAkY3QcDxan3NYN-ePruYdsRwh8MvsftoewPgJsa99S_Qo7hM7Ag8aUJpnAJ9k7q6feXROY02d_s3gZjcMP3VoXRcJt1uUXQvdGW",
-                    }}
-                    style={styles.badgeAvatar}
-                    contentFit="cover"
-                  />
-                  <Text style={styles.badgeName}>Mateo</Text>
-                </View>
-              </View>
-
-              <View style={styles.turnActionsRow}>
-                <Pressable
-                  style={styles.goldActionButton}
-                  onPress={() => router.push("/(tabs)/bookings")}
-                >
-                  <Text style={styles.goldActionButtonText}>Ver Detalles</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.darkActionButton}
-                  onPress={() => setCancelModalVisible(true)}
-                >
-                  <Text style={styles.darkActionButtonText}>Cancelar</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.emptyTurnCard}>
-              <Text style={styles.emptyTurnTitle}>
-                No tienes turnos activos
+          {/* Fila inferior: Saludo y Nombre completo */}
+          <View style={styles.greetingContainer}>
+            {isHomeLoading ? (
+              <Skeleton style={styles.greetingSkeleton} />
+            ) : (
+              <Text style={styles.greetingText}>
+                Hola, <Text style={styles.customerName}>{displayName}</Text>
               </Text>
-              <Text style={styles.emptyTurnText}>
-                Reserva uno nuevo cuando quieras.
-              </Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
-        <Pressable
-          style={styles.reserveButton}
-          onPress={() => router.push("/(tabs)/services-list")}
-        >
-          <View>
-            <Text style={styles.reserveTitle}>Reservar turno</Text>
-            <Text style={styles.reserveSubtitle}>
-              Encuentra tu espacio en el Atelier
-            </Text>
-          </View>
-
-          <View style={styles.reserveIconWrap}>
-            <MaterialIcons name="add-circle" size={34} color="#fdf6df" />
-          </View>
-        </Pressable>
-
+        {/* --- SECCIÓN PRÓXIMO TURNO --- */}
         <View style={styles.section}>
-          <View style={styles.featuredHeader}>
-            <Text style={styles.featuredTitle}>Barberos destacados</Text>
-            {isHomeLoading ? (
-              <Skeleton style={styles.featuredLinkSkeleton} borderRadius={6} />
-            ) : (
-              <Pressable
-                onPress={() => router.push("/(tabs)/featured-barbers")}
-              >
-                <Text style={styles.featuredLink}>Ver todos</Text>
-              </Pressable>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tu Próximo Turno</Text>
+            {showNextTurnCard && (
+              <View style={styles.liveIndicator}>
+                <View style={styles.pulseDot} />
+                <Text style={styles.liveText}>CONFIRMADO</Text>
+              </View>
             )}
           </View>
 
           {isHomeLoading ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredList}
-            >
-              {[0, 1].map((item) => (
-                <View key={item} style={styles.barberCard}>
-                  <View style={styles.favoriteBarberButton}>
-                    <Skeleton
-                      style={styles.favoriteIconSkeleton}
-                      borderRadius={9}
-                    />
-                  </View>
-
-                  <View style={styles.barberImageBorder}>
-                    <Skeleton style={styles.barberImage} borderRadius={44} />
-                  </View>
-
-                  <Skeleton style={styles.barberNameSkeleton} />
-                  <Skeleton style={styles.barberRoleSkeleton} />
-                  <Skeleton style={styles.barberBranchSkeleton} />
-
-                  <Skeleton style={styles.profileButtonSkeleton} />
+            <Skeleton style={styles.ticketCardSkeleton} />
+          ) : showNextTurnCard ? (
+            <View style={styles.ticketCard}>
+              <View style={styles.ticketInfo}>
+                <View style={styles.ticketHeader}>
+                  <Text style={styles.serviceName}>Corte Atelier & Barba</Text>
+                  <Text style={styles.priceTag}>$4.500</Text>
                 </View>
-              ))}
-            </ScrollView>
+                <View style={styles.detailsRow}>
+                  <View style={styles.detailItem}>
+                    <MaterialIcons name="event" size={14} color="#D4AF37" />
+                    <Text style={styles.detailText}>15 Oct, 10:30 AM</Text>
+                  </View>
+                  <View style={styles.dividerDot} />
+                  <View style={styles.detailItem}>
+                    <MaterialIcons name="person" size={14} color="#D4AF37" />
+                    <Text style={styles.detailText}>Mateo</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.ticketActions}>
+                <Pressable
+                  style={styles.btnSecondary}
+                  onPress={() => setCancelModalVisible(true)}
+                >
+                  <Text style={styles.btnSecondaryText}>CANCELAR</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.btnPrimary}
+                  onPress={() => router.push("/(tabs)/bookings")}
+                >
+                  <Text style={styles.btnPrimaryText}>VER DETALLES</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No tienes turnos pendientes</Text>
+            </View>
+          )}
+        </View>
+
+        {/* --- BOTÓN HERO RESERVAR --- */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.reserveHero,
+            pressed && { opacity: 0.9 },
+          ]}
+          onPress={() => router.push("/(tabs)/services-list")}
+        >
+          <View style={styles.reserveContent}>
+            <Text style={styles.reserveLabel}>EXPERIENCIA COMPLETA</Text>
+            <Text style={styles.reserveTitleText}>RESERVAR{"\n"}TURNO</Text>
+            <View style={styles.reserveBadge}>
+              <Text style={styles.reserveBadgeText}>DISPONIBLE AHORA</Text>
+            </View>
+          </View>
+          <View style={styles.heroIconWrap}>
+            <FontAwesome5 name="cut" size={40} color="rgba(0,0,0,0.1)" />
+            <View style={styles.plusIcon}>
+              <MaterialIcons name="add" size={24} color="#D4AF37" />
+            </View>
+          </View>
+        </Pressable>
+
+        {/* --- BARBEROS DESTACADOS --- */}
+        <View style={[styles.section, { marginBottom: 40 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Barberos del Atelier</Text>
+            <Pressable onPress={() => router.push("/(tabs)/featured-barbers")}>
+              <Text style={styles.viewAllText}>Ver todos</Text>
+            </Pressable>
+          </View>
+
+          {isBarbersLoading ? (
+            <Skeleton style={{ height: 120, width: "100%" }} />
+          ) : featuredBarbers.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No hay barberos destacados</Text>
+            </View>
           ) : (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredList}
+              contentContainerStyle={styles.horizontalList}
             >
               {featuredBarbers.map((barber) => (
                 <View key={barber.id} style={styles.barberCard}>
-                  <Pressable
-                    style={styles.favoriteBarberButton}
-                    onPress={() => {
-                      void toggleFavoriteBarber({
-                        id: barber.barberId,
-                        name: barber.name,
-                        role: barber.role,
-                        branch: barber.branch,
-                        image: barber.image,
-                        shopId: barber.shopId,
-                      }).then((result) => {
-                        setFavoriteBarberIds(
-                          result.favorites.map((item) => item.id),
+                  <View style={styles.cardHeader}>
+                    <View style={styles.barberAvatarWrap}>
+                      <Image
+                        source={{ uri: barber.avatarUrl }}
+                        style={styles.barberImg}
+                      />
+                      <View style={styles.ratingBadge}>
+                        <MaterialIcons name="star" size={10} color="#D4AF37" />
+                        <Text style={styles.ratingText}>4.9</Text>
+                      </View>
+                    </View>
+                    <Pressable
+                      style={styles.favBtn}
+                      onPress={() => {
+                        toggleFavoriteBarber({
+                          id: barber.id,
+                          name: barber.name,
+                          role: barber.specialty,
+                          branch: barber.shopName || "",
+                          image: barber.avatarUrl,
+                          shopId: barber.shopId || "",
+                        }).then((res) =>
+                          setFavoriteBarberIds(res.favorites.map((f) => f.id)),
                         );
-                      });
-                    }}
-                  >
-                    <MaterialIcons
-                      name={
-                        favoriteBarberIds.includes(barber.barberId)
-                          ? "favorite"
-                          : "favorite-border"
-                      }
-                      size={18}
-                      color="#f2ca50"
-                    />
-                  </Pressable>
-
-                  <View
-                    style={[
-                      styles.barberImageBorder,
-                      barber.featured
-                        ? styles.barberImageBorderFeatured
-                        : styles.barberImageBorderRegular,
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: barber.image }}
-                      style={styles.barberImage}
-                      contentFit="cover"
-                    />
+                      }}
+                    >
+                      <MaterialIcons
+                        name={
+                          favoriteBarberIds.includes(barber.id)
+                            ? "favorite"
+                            : "favorite-border"
+                        }
+                        size={18}
+                        color="#D4AF37"
+                      />
+                    </Pressable>
                   </View>
-
-                  <Text style={styles.barberName}>{barber.name}</Text>
-                  <Text
-                    style={[
-                      styles.barberRole,
-                      barber.featured
-                        ? styles.barberRoleFeatured
-                        : styles.barberRoleRegular,
-                    ]}
-                  >
-                    {barber.role}
-                  </Text>
-                  <Text style={styles.barberBranch}>{barber.branch}</Text>
-
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.barberNameText}>{barber.name}</Text>
+                    <Text style={styles.barberSpecialty}>
+                      {barber.specialty}
+                    </Text>
+                  </View>
                   <Pressable
-                    style={styles.profileButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(tabs)/barber-profile",
-                        params: {
-                          barberId: barber.barberId,
-                          barberName: barber.name,
-                          barberRole: barber.role,
-                          barberBranch: barber.branch,
-                          barberImage: barber.image,
-                          shopId: barber.shopId,
-                          shopName: barber.branch,
-                        },
-                      })
-                    }
+                    style={styles.btnSmall}
+                    onPress={() => router.push("/(tabs)/barber-profile")}
                   >
-                    <Text style={styles.profileButtonText}>Ver perfil</Text>
+                    <Text style={styles.btnSmallText}>PERFIL</Text>
                   </Pressable>
                 </View>
               ))}
@@ -425,612 +320,421 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
+      {/* --- BOTTOM NAV --- */}
+      <View style={styles.bottomNavContainer}>
+        <BlurView intensity={90} tint="dark" style={styles.bottomNav}>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)")}
+          >
+            <View style={styles.activeIndicator}>
+              <MaterialIcons name="content-cut" size={22} color="#000" />
+            </View>
+            <Text style={styles.navTextActive}>Atelier</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)/explore")}
+          >
+            <MaterialIcons name="grid-view" size={24} color="#555" />
+            <Text style={styles.navText}>Servicios</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/bookings")}
+          >
+            <MaterialIcons name="event-note" size={24} color="#555" />
+            <Text style={styles.navText}>Turnos</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
+            <MaterialIcons name="person-outline" size={24} color="#555" />
+            <Text style={styles.navText}>Perfil</Text>
+          </Pressable>
+        </BlurView>
+      </View>
+
+      {/* --- MODAL NOTIFICACIONES --- */}
       <Modal
         visible={notificationsModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setNotificationsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.notificationsHeaderRow}>
-              <Text style={styles.modalTitle}>Notificaciones</Text>
-              <Pressable onPress={() => setNotificationsModalVisible(false)}>
-                <MaterialIcons name="close" size={20} color="#d0c5af" />
+            <Text style={styles.modalTitle}>Notificaciones</Text>
+            {/* Aquí puedes renderizar la lista de notificaciones reales */}
+            <Text style={styles.modalBody}>
+              Aquí aparecerán tus notificaciones.
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalBtnCancel}
+                onPress={() => setNotificationsModalVisible(false)}
+              >
+                <Text style={styles.modalBtnText}>CERRAR</Text>
               </Pressable>
             </View>
-
-            {notifications.map((notification) => (
-              <View key={notification.id} style={styles.notificationItem}>
-                <Text style={styles.notificationTitle}>
-                  {notification.title}
-                </Text>
-                <Text style={styles.notificationBody}>{notification.body}</Text>
-                <Text style={styles.notificationTime}>{notification.time}</Text>
-              </View>
-            ))}
-
-            {!notifications.length ? (
-              <Text style={styles.modalBody}>
-                No tienes notificaciones nuevas.
-              </Text>
-            ) : null}
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={cancelModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCancelModalVisible(false)}
-      >
+      {/* --- MODAL CANCELACIÓN --- */}
+      <Modal visible={cancelModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Cancelar turno</Text>
+            <Text style={styles.modalTitle}>¿Cancelar Turno?</Text>
             <Text style={styles.modalBody}>
-              Estas seguro de que quieres cancelar tu proximo turno?
+              Esta acción no se puede deshacer.
             </Text>
-
             <View style={styles.modalActions}>
               <Pressable
-                style={styles.modalCancelButton}
+                style={styles.modalBtnCancel}
                 onPress={() => setCancelModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>No</Text>
+                <Text style={styles.modalBtnText}>VOLVER</Text>
               </Pressable>
-
               <Pressable
-                style={styles.modalConfirmButton}
+                style={styles.modalBtnConfirm}
                 onPress={() => {
                   setShowNextTurnCard(false);
                   setCancelModalVisible(false);
                 }}
               >
-                <Text style={styles.modalConfirmText}>Si, cancelar</Text>
+                <Text style={[styles.modalBtnText, { color: "#000" }]}>
+                  SÍ, CANCELAR
+                </Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
-
-      <View style={styles.bottomNav}>
-        <Pressable style={[styles.navItem, styles.navItemActive]}>
-          <MaterialIcons name="content-cut" size={22} color="#d4af37" />
-          <Text style={styles.navTextActive}>Atelier</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/explore")}
-        >
-          <MaterialIcons name="dry-cleaning" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Services</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/bookings")}
-        >
-          <MaterialIcons name="event-available" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Bookings</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/profile")}
-        >
-          <MaterialIcons name="person" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Profile</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
+  goldText: { color: "#D4AF37", fontWeight: "900" },
+
+  // --- NUEVOS ESTILOS DE HEADER ---
   header: {
-    height: 88,
-    paddingTop: 20,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
+    paddingBottom: 10,
+  },
+  headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#131313",
+    marginBottom: 20,
   },
-  headerCenter: {
-    alignItems: "center",
+  brandTitle: {
+    color: "#FFF",
+    fontSize: 14,
+    letterSpacing: 3,
+    fontWeight: "400",
   },
   headerActions: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
-  brandTitle: {
-    color: "#d4af37",
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: 3,
-    fontWeight: "800",
-  },
-  greeting: {
-    marginTop: 2,
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  greetingSkeleton: {
-    marginTop: 4,
-    width: 104,
-    height: 14,
-  },
-  notificationButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.2)",
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#161616",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#222",
   },
   notificationDot: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "#d4af37",
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 14,
-    paddingHorizontal: 16,
-    paddingBottom: 130,
-    gap: 22,
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  nextTurnCard: {
-    borderRadius: 18,
-    backgroundColor: "#2a2a2a",
-    padding: 18,
-    paddingLeft: 20,
-    overflow: "hidden",
-  },
-  nextTurnCardSkeleton: {
-    borderRadius: 18,
-    backgroundColor: "#2a2a2a",
-    padding: 18,
-    paddingLeft: 20,
-    overflow: "hidden",
-  },
-  nextTurnTextSkeletonWrap: {
-    flex: 1,
-    gap: 8,
-  },
-  serviceTitleSkeleton: {
-    width: "72%",
-    height: 28,
-  },
-  dateSkeleton: {
-    width: "52%",
-    height: 14,
-  },
-  leftAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: "#d4af37",
-  },
-  nextTurnTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 18,
-  },
-  serviceTitle: {
-    color: "#f2ca50",
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  dateText: {
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  barberBadge: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-  },
-  badgeAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  badgeName: {
-    color: "#e5e2e1",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  barberBadgeSkeleton: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-  },
-  badgeNameSkeleton: {
-    width: 54,
-    height: 12,
-  },
-  turnActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  goldActionButton: {
-    flex: 1,
-    minHeight: 46,
-    borderRadius: 12,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goldActionButtonText: {
-    color: "#3c2f00",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  darkActionButton: {
-    flex: 1,
-    minHeight: 46,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  darkActionButtonText: {
-    color: "#d0c5af",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  actionButtonSkeleton: {
-    flex: 1,
-    minHeight: 46,
-    borderRadius: 12,
-  },
-  emptyTurnCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    backgroundColor: "#1c1b1b",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  emptyTurnTitle: {
-    color: "#e5e2e1",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  emptyTurnText: {
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  modalCard: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    padding: 16,
-    gap: 10,
-  },
-  modalTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  notificationsHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  notificationItem: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    backgroundColor: "#131313",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 3,
-  },
-  notificationTitle: {
-    color: "#e5e2e1",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  notificationBody: {
-    color: "#d0c5af",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  notificationTime: {
-    color: "#a99f8c",
-    fontSize: 11,
-  },
-  modalBody: {
-    color: "#d0c5af",
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
-  },
-  modalCancelButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#4d4635",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCancelText: {
-    color: "#d0c5af",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  modalConfirmButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalConfirmText: {
-    color: "#241a00",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  reserveButton: {
-    borderRadius: 18,
-    backgroundColor: "#d4af37",
-    minHeight: 110,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  reserveTitle: {
-    color: "#3c2f00",
-    fontSize: 32,
-    lineHeight: 36,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  reserveSubtitle: {
-    color: "rgba(60, 47, 0, 0.75)",
-    fontSize: 14,
-  },
-  reserveIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(60, 47, 0, 0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  featuredHeader: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  featuredTitle: {
-    color: "#e5e2e1",
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: "800",
-  },
-  featuredLink: {
-    color: "#f2ca50",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  featuredLinkSkeleton: {
-    width: 58,
-    height: 14,
-  },
-  featuredList: {
-    gap: 12,
-    paddingTop: 2,
-    paddingBottom: 4,
-    paddingRight: 16,
-  },
-  barberCard: {
-    position: "relative",
-    width: 280,
-    backgroundColor: "#2a2a2a",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.2)",
-    paddingHorizontal: 22,
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  favoriteBarberButton: {
-    position: "absolute",
     top: 10,
     right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: "#D4AF37",
+    borderWidth: 1.5,
+    borderColor: "#161616",
+  },
+  greetingContainer: {
+    width: "100%",
+  },
+  greetingText: {
+    color: "#666",
+    fontSize: 26,
+    fontWeight: "400",
+    lineHeight: 34,
+  },
+  customerName: {
+    color: "#FFF",
+    fontWeight: "800",
+    textTransform: "capitalize",
+  },
+  greetingSkeleton: { width: "80%", height: 35, borderRadius: 8 },
+
+  // --- RESTO DE ESTILOS ---
+  scrollContent: { paddingBottom: 160 },
+  section: { marginTop: 25, paddingHorizontal: 24 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  sectionTitle: { color: "#FFF", fontSize: 18, fontWeight: "700" },
+  viewAllText: { color: "#D4AF37", fontSize: 13, fontWeight: "600" },
+
+  ticketCard: {
+    backgroundColor: "#161616",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#222",
+    overflow: "hidden",
+  },
+  ticketCardSkeleton: { width: "100%", height: 160, borderRadius: 24 },
+  ticketInfo: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
+    borderStyle: "dashed",
+  },
+  ticketHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  serviceName: { color: "#FFF", fontSize: 18, fontWeight: "700" },
+  priceTag: { color: "#D4AF37", fontSize: 16, fontWeight: "800" },
+  detailsRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  detailItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  detailText: { color: "#888", fontSize: 13 },
+  dividerDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#333" },
+  ticketActions: { flexDirection: "row", padding: 12, gap: 10 },
+  btnPrimary: {
+    flex: 1.5,
+    backgroundColor: "#D4AF37",
+    height: 45,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnPrimaryText: { color: "#000", fontWeight: "800", fontSize: 12 },
+  btnSecondary: {
+    flex: 1,
+    backgroundColor: "#222",
+    height: 45,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnSecondaryText: { color: "#FFF", fontWeight: "700", fontSize: 11 },
+  emptyCard: {
+    padding: 30,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#222",
+    borderStyle: "dashed",
+    alignItems: "center",
+  },
+  emptyText: { color: "#555", fontSize: 14 },
+
+  reserveHero: {
+    backgroundColor: "#D4AF37",
+    marginHorizontal: 24,
+    marginTop: 30,
+    borderRadius: 28,
+    padding: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#D4AF37",
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  reserveContent: { flex: 1 },
+  reserveLabel: {
+    color: "rgba(0,0,0,0.4)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  reserveTitleText: {
+    color: "#000",
+    fontSize: 34,
+    fontWeight: "900",
+    lineHeight: 34,
+    marginTop: 5,
+  },
+  reserveBadge: {
+    backgroundColor: "rgba(0,0,0,0.08)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginTop: 15,
+  },
+  reserveBadgeText: { color: "#000", fontSize: 9, fontWeight: "800" },
+  heroIconWrap: {
+    width: 70,
+    height: 70,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plusIcon: {
+    position: "absolute",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  horizontalList: { paddingLeft: 0, marginTop: 5 },
+  barberCard: {
+    backgroundColor: "#161616",
+    width: 170,
+    borderRadius: 24,
+    padding: 15,
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between" },
+  barberAvatarWrap: { position: "relative" },
+  barberImg: { width: 65, height: 65, borderRadius: 20 },
+  ratingBadge: {
+    position: "absolute",
+    bottom: -5,
+    right: -5,
+    backgroundColor: "#000",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  ratingText: { color: "#FFF", fontSize: 10, fontWeight: "800" },
+  favBtn: {
     width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#0A0A0A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardInfo: { marginVertical: 15 },
+  barberNameText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  barberSpecialty: {
+    color: "#D4AF37",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  btnSmall: {
+    backgroundColor: "#222",
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnSmallText: { color: "#FFF", fontSize: 10, fontWeight: "800" },
+
+  bottomNavContainer: {
+    position: "absolute",
+    bottom: 35,
+    left: 20,
+    right: 20,
+    zIndex: 100,
+  },
+  bottomNav: {
+    flexDirection: "row",
+    backgroundColor: "rgba(20, 20, 20, 0.75)",
+    borderRadius: 35,
+    paddingVertical: 12,
+    justifyContent: "space-around",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
+  },
+  navItem: { alignItems: "center", minWidth: 65 },
+  activeIndicator: {
+    backgroundColor: "#D4AF37",
+    width: 48,
     height: 32,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(14,14,14,0.72)",
+    marginBottom: 4,
   },
-  favoriteIconSkeleton: {
-    width: 18,
-    height: 18,
-  },
-  barberImageBorder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
-    padding: 3,
-    marginBottom: 12,
-  },
-  barberImageBorderFeatured: {
-    borderColor: "rgba(242, 202, 80, 0.4)",
-  },
-  barberImageBorderRegular: {
-    borderColor: "#353535",
-  },
-  barberImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 44,
-  },
-  barberName: {
-    color: "#e5e2e1",
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "700",
-  },
-  barberNameSkeleton: {
-    width: "45%",
-    height: 22,
-    marginTop: 2,
-  },
-  barberRole: {
-    marginTop: 2,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  barberRoleFeatured: {
-    color: "#f2ca50",
-  },
-  barberRoleRegular: {
-    color: "#d0c5af",
-  },
-  barberRoleSkeleton: {
-    width: "52%",
-    height: 14,
-    marginTop: 4,
-  },
-  barberBranch: {
-    marginTop: 2,
-    marginBottom: 12,
-    color: "#a99f8c",
-    fontSize: 12,
-  },
-  barberBranchSkeleton: {
-    width: "62%",
-    height: 12,
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  profileButton: {
-    width: "100%",
-    minHeight: 38,
-    borderRadius: 10,
-    backgroundColor: "#1c1b1b",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileButtonText: {
-    color: "#e5e2e1",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  profileButtonSkeleton: {
-    width: "100%",
-    minHeight: 38,
-    borderRadius: 10,
-  },
-  bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "rgba(19, 19, 19, 0.94)",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 28,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
-  navItem: {
-    minWidth: 76,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-  },
-  navItemActive: {
-    backgroundColor: "#2a2a2a",
-  },
-  navText: {
-    marginTop: 4,
-    color: "#d4af37",
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "500",
-  },
+  navText: { color: "#555", fontSize: 10, fontWeight: "600", marginTop: 2 },
   navTextActive: {
-    marginTop: 4,
-    color: "#d4af37",
+    color: "#D4AF37",
     fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "700",
+    fontWeight: "800",
+    marginTop: 2,
   },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: "#161616",
+    borderRadius: 28,
+    padding: 25,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  modalTitle: {
+    color: "#FFF",
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  modalBody: {
+    color: "#888",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 25,
+  },
+  modalActions: { flexDirection: "row", gap: 10 },
+  modalBtnCancel: {
+    flex: 1,
+    height: 50,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#333",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnConfirm: {
+    flex: 1,
+    height: 50,
+    borderRadius: 15,
+    backgroundColor: "#D4AF37",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnText: { color: "#FFF", fontWeight: "800", fontSize: 12 },
+
+  liveIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#00C851",
+  },
+  liveText: { color: "#00C851", fontSize: 10, fontWeight: "800" },
 });

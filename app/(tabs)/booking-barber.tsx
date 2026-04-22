@@ -1,10 +1,19 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+    ActivityIndicator,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
-import { bookingBarbers } from "@/constants/booking-flow";
+import { getPublicBarbershopById, getShopBarbers } from "@/lib/booking-catalog";
 
 const pickFirst = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
@@ -19,13 +28,70 @@ export default function BookingBarberScreen() {
   }>();
 
   const shopId = pickFirst(params.shopId) ?? "shop-1";
-  const shopName = pickFirst(params.shopName) ?? "Atelier Palermo";
-  const serviceId = pickFirst(params.serviceId) ?? "service-haircut";
+  const [shopName, setShopName] = useState(
+    pickFirst(params.shopName) ?? "Barbería",
+  );
+  const serviceId = pickFirst(params.serviceId) ?? "";
+  const serviceName = pickFirst(params.serviceName) ?? "Servicio";
+  const serviceDuration = pickFirst(params.serviceDuration) ?? "45";
   const preselectedBarberId =
     pickFirst(params.preselectedBarberId) ?? "barber-any";
   const preselectedBarberName = pickFirst(params.preselectedBarberName) ?? "";
 
+  const [barbers, setBarbers] = useState<
+    Awaited<ReturnType<typeof getShopBarbers>>
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedBarberId, setSelectedBarberId] = useState(preselectedBarberId);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      const [shop, items] = await Promise.all([
+        getPublicBarbershopById(shopId),
+        getShopBarbers(shopId),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (shop?.name) {
+        setShopName(shop.name);
+      }
+
+      setBarbers(items);
+      setSelectedBarberId((current) => current || items[0]?.id || "barber-any");
+      setIsLoading(false);
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [shopId]);
+
+  const renderedBarbers = useMemo(
+    () => [
+      {
+        id: "barber-any",
+        name: "Cualquier profesional",
+        specialty: `El primero disponible para ${serviceName.toLowerCase()}`,
+        rating: "",
+        reviews: "",
+        avatarUrl: "",
+        colorHex: "#D4AF37",
+        shopId,
+        shopName,
+        userId: "",
+      },
+      ...barbers,
+    ],
+    [barbers, serviceName, shopId, shopName],
+  );
 
   const goNext = () => {
     router.push({
@@ -34,267 +100,333 @@ export default function BookingBarberScreen() {
         shopId,
         shopName,
         serviceId,
+        serviceName,
+        serviceDuration,
         barberId: selectedBarberId,
       },
     });
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
+      {/* HEADER */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={22} color="#e5e2e1" />
+          <MaterialIcons name="keyboard-backspace" size={26} color="#D4AF37" />
         </Pressable>
-        <Text style={styles.headerTitle}>Elegi barbero</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Barberos</Text>
+          <Text style={styles.shopLabel}>{shopName}</Text>
+        </View>
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.progressWrap}>
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressActive]} />
-        <View style={styles.progressStep} />
-        <View style={styles.progressStep} />
-      </View>
-
-      <Text style={styles.stepText}>Paso 3 / 6</Text>
-      <Text style={styles.shopLabel}>{shopName}</Text>
-      {preselectedBarberId !== "barber-any" && preselectedBarberName ? (
-        <Text style={styles.preselectedText}>
-          Barbero preseleccionado: {preselectedBarberName}
+      {/* PROGRESS BAR */}
+      <View style={styles.progressSection}>
+        <View style={styles.progressContainer}>
+          {[1, 2, 3, 4, 5, 6].map((step) => (
+            <View
+              key={step}
+              style={[
+                styles.progressStep,
+                step < 3 && styles.progressDone,
+                step === 3 && styles.progressActive,
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={styles.stepIndicatorText}>
+          PASO 03 <Text style={{ color: "#444" }}>/ 06</Text>
         </Text>
-      ) : null}
+      </View>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {bookingBarbers.map((barber) => {
-          const selected = barber.id === selectedBarberId;
-          const isAny = barber.id === "barber-any";
+        <Text style={styles.sectionTitle}>Selecciona a tu experto</Text>
 
-          return (
-            <Pressable
-              key={barber.id}
-              style={[styles.barberCard, selected && styles.barberCardSelected]}
-              onPress={() => setSelectedBarberId(barber.id)}
-            >
-              <View style={styles.leftWrap}>
-                {isAny ? (
-                  <View style={styles.anyIconWrap}>
-                    <MaterialIcons name="bolt" size={24} color="#f2ca50" />
-                  </View>
-                ) : (
-                  <Image
-                    source={{ uri: barber.image }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                  />
-                )}
+        {preselectedBarberId !== "barber-any" && preselectedBarberName && (
+          <View style={styles.preselectedBadge}>
+            <MaterialIcons name="auto-awesome" size={14} color="#D4AF37" />
+            <Text style={styles.preselectedText}>
+              Recomendado: {preselectedBarberName}
+            </Text>
+          </View>
+        )}
 
-                <View style={styles.textWrap}>
-                  <Text style={styles.barberName}>{barber.name}</Text>
-                  <Text style={styles.barberSpecialty}>{barber.specialty}</Text>
-                  {barber.rating ? (
-                    <Text style={styles.ratingText}>
-                      {barber.rating} ({barber.reviews} res.)
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color="#D4AF37" />
+            <Text style={styles.emptyText}>
+              Cargando barberos desde Supabase...
+            </Text>
+          </View>
+        ) : renderedBarbers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="person-off" size={34} color="#333" />
+            <Text style={styles.emptyText}>
+              Todavía no hay barberos activos en esta barbería.
+            </Text>
+          </View>
+        ) : (
+          renderedBarbers.map((barber) => {
+            const isSelected = barber.id === selectedBarberId;
+            const isAny = barber.id === "barber-any";
+
+            return (
+              <Pressable
+                key={barber.id}
+                style={[
+                  styles.barberCard,
+                  isSelected && styles.barberCardSelected,
+                ]}
+                onPress={() => setSelectedBarberId(barber.id)}
+              >
+                <View style={styles.cardInfo}>
+                  {isAny ? (
+                    <LinearGradient
+                      colors={["#2A2A2A", "#1A1A1A"]}
+                      style={styles.anyIconWrap}
+                    >
+                      <MaterialIcons name="bolt" size={26} color="#D4AF37" />
+                    </LinearGradient>
+                  ) : (
+                    <View
+                      style={[
+                        styles.avatarBorder,
+                        isSelected && { borderColor: "#D4AF37" },
+                      ]}
+                    >
+                      <Image
+                        source={{ uri: barber.avatarUrl }}
+                        style={styles.avatar}
+                        contentFit="cover"
+                      />
+                    </View>
+                  )}
+
+                  <View style={styles.textWrap}>
+                    <Text
+                      style={[
+                        styles.barberName,
+                        isSelected && { color: "#FFF" },
+                      ]}
+                    >
+                      {barber.name}
                     </Text>
-                  ) : null}
-                </View>
-              </View>
+                    <Text style={styles.barberSpecialty}>
+                      {isAny ? "Disponibilidad inmediata" : barber.specialty}
+                    </Text>
 
-              <View style={[styles.radio, selected && styles.radioActive]}>
-                {selected ? <View style={styles.radioInner} /> : null}
-              </View>
-            </Pressable>
-          );
-        })}
+                    {!isAny && barber.rating && (
+                      <View style={styles.ratingRow}>
+                        <MaterialIcons name="star" size={12} color="#D4AF37" />
+                        <Text style={styles.ratingValue}>{barber.rating}</Text>
+                        <Text style={styles.reviewsText}>
+                          ({barber.reviews} res.)
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <View
+                  style={[
+                    styles.customRadio,
+                    isSelected && styles.customRadioActive,
+                  ]}
+                >
+                  {isSelected && <View style={styles.radioDot} />}
+                </View>
+              </Pressable>
+            );
+          })
+        )}
       </ScrollView>
 
+      {/* FOOTER */}
       <View style={styles.footer}>
-        <Pressable style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Siguiente</Text>
-          <MaterialIcons name="arrow-forward" size={18} color="#3c2f00" />
+        <Pressable
+          style={({ pressed }) => [
+            styles.nextButton,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+          ]}
+          onPress={goNext}
+          disabled={isLoading}
+        >
+          <Text style={styles.nextButtonText}>Continuar</Text>
+          <MaterialIcons name="chevron-right" size={24} color="#000" />
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
   header: {
-    height: 72,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  headerCenter: { alignItems: "center" },
+  backButton: { width: 40, height: 40, justifyContent: "center" },
   headerTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "800",
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
-  headerSpacer: {
-    width: 40,
+  headerSpacer: { width: 40 },
+  shopLabel: { color: "#666", fontSize: 11, fontWeight: "600" },
+
+  progressSection: {
+    paddingHorizontal: 25,
+    marginTop: 10,
+    alignItems: "center",
   },
-  progressWrap: {
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 20,
-    marginTop: 4,
-  },
+  progressContainer: { flexDirection: "row", gap: 6, width: "100%" },
   progressStep: {
     flex: 1,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "#1c1b1b",
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "#222",
   },
-  progressDone: {
-    backgroundColor: "rgba(242, 202, 80, 0.35)",
-  },
-  progressActive: {
-    backgroundColor: "#f2ca50",
-  },
-  stepText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "700",
+  progressDone: { backgroundColor: "rgba(212, 175, 55, 0.4)" },
+  progressActive: { backgroundColor: "#D4AF37" },
+  stepIndicatorText: {
+    color: "#D4AF37",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 8,
     letterSpacing: 1,
-    textAlign: "center",
-    marginTop: 10,
   },
-  shopLabel: {
-    color: "#d0c5af",
+
+  sectionTitle: {
+    color: "#FFF",
+    fontSize: 22,
+    fontWeight: "800",
+    marginHorizontal: 25,
+    marginTop: 25,
+    marginBottom: 5,
+  },
+  preselectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: 25,
+    marginBottom: 15,
+    backgroundColor: "rgba(212, 175, 55, 0.1)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  preselectedText: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 140 },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 10,
+  },
+  emptyText: {
+    color: "#666",
+    textAlign: "center",
     fontSize: 13,
-    textAlign: "center",
-    marginTop: 6,
+    maxWidth: 260,
   },
-  preselectedText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 6,
-    fontWeight: "600",
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 130,
-    gap: 12,
-  },
+
   barberCard: {
-    minHeight: 84,
-    borderRadius: 16,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    backgroundColor: "#111",
+    borderRadius: 20,
+    padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-  },
-  barberCardSelected: {
-    borderColor: "#d4af37",
-  },
-  leftWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  anyIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#20201f",
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.35)",
+    borderColor: "#1A1A1A",
+  },
+  barberCardSelected: { borderColor: "#D4AF37", backgroundColor: "#161512" },
+  cardInfo: { flexDirection: "row", alignItems: "center", gap: 14, flex: 1 },
+
+  anyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#333",
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  avatarBorder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "#222",
+    padding: 2,
   },
-  textWrap: {
-    flex: 1,
+  avatar: { width: "100%", height: "100%", borderRadius: 26 },
+
+  textWrap: { flex: 1 },
+  barberName: { color: "#BBB", fontSize: 17, fontWeight: "800" },
+  barberSpecialty: { color: "#666", fontSize: 12, marginTop: 2 },
+
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
   },
-  barberName: {
-    color: "#e5e2e1",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  barberSpecialty: {
-    marginTop: 2,
-    color: "#d0c5af",
-    fontSize: 12,
-  },
-  ratingText: {
-    marginTop: 5,
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  radio: {
+  ratingValue: { color: "#D4AF37", fontSize: 12, fontWeight: "800" },
+  reviewsText: { color: "#444", fontSize: 12 },
+
+  customRadio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#4d4635",
+    borderColor: "#333",
     alignItems: "center",
     justifyContent: "center",
   },
-  radioActive: {
-    borderColor: "#f2ca50",
-    backgroundColor: "rgba(242, 202, 80, 0.08)",
+  customRadioActive: { borderColor: "#D4AF37" },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#D4AF37",
   },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#f2ca50",
-  },
+
   footer: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 22,
-    backgroundColor: "rgba(14, 14, 14, 0.96)",
+    paddingTop: 20,
+    paddingBottom: 40,
+    backgroundColor: "#0A0A0A",
+    borderTopWidth: 1,
+    borderColor: "#1A1A1A",
   },
   nextButton: {
-    minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: "#d4af37",
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: "#D4AF37",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  nextButtonText: {
-    color: "#3c2f00",
-    fontSize: 18,
-    fontWeight: "800",
-  },
+  nextButtonText: { color: "#000", fontSize: 18, fontWeight: "900" },
 });

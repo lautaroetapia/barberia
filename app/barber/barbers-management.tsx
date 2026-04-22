@@ -1,9 +1,13 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+    Alert,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -24,10 +28,13 @@ import {
     type OwnerBarber,
     type OwnerBarberRequest,
 } from "@/lib/owner-barbers";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export default function BarbersManagementScreen() {
+  // ... (Mantengo los mismos estados y lógica del original)
   const [barbers, setBarbers] = useState<OwnerBarber[]>([]);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [pendingRequests, setPendingRequests] = useState<OwnerBarberRequest[]>(
     [],
   );
@@ -56,30 +63,92 @@ export default function BarbersManagementScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadData = async () => {
-      const [storedBarbers, storedRequests] = await Promise.all([
-        getOwnerBarbers(),
-        getOwnerBarberRequests(),
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
+      const [{ data: authData }, storedBarbers, storedRequests] =
+        await Promise.all([
+          supabase.auth.getUser(),
+          getOwnerBarbers(),
+          getOwnerBarberRequests(),
+        ]);
+      if (!isMounted) return;
+      setCurrentUserId(authData.user?.id ?? "");
+      setCurrentUserEmail(authData.user?.email?.trim().toLowerCase() ?? "");
       setBarbers(storedBarbers);
       setPendingRequests(storedRequests);
       setIsLoading(false);
     };
-
     void loadData();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
+  const ownerBarberActive = useMemo(() => {
+    if (!currentUserId && !currentUserEmail) {
+      return false;
+    }
+
+    return barbers.some((item) => {
+      const byUserId =
+        Boolean(currentUserId) && item.accountUserId === currentUserId;
+      const byEmail =
+        Boolean(currentUserEmail) &&
+        item.accountEmail?.trim().toLowerCase() === currentUserEmail;
+      return (byUserId || byEmail) && item.active;
+    });
+  }, [barbers, currentUserEmail, currentUserId]);
+
   const goBarberView = async () => {
+    const { data } = await supabase.auth.getUser();
+    const currentUser = data.user ?? null;
+
+    if (currentUser?.id) {
+      const currentBarbers = await getOwnerBarbers(currentUser);
+      const userEmail = currentUser.email?.trim().toLowerCase() ?? "";
+      const matchedBarber = currentBarbers.find((barber) => {
+        const byUserId = barber.accountUserId === currentUser.id;
+        const byEmail =
+          Boolean(userEmail) &&
+          barber.accountEmail?.trim().toLowerCase() === userEmail;
+        return byUserId || byEmail;
+      });
+
+      if (matchedBarber) {
+        const nextBarbers = currentBarbers.map((barber) =>
+          barber.id === matchedBarber.id
+            ? {
+                ...barber,
+                active: true,
+                accountUserId: currentUser.id,
+                accountEmail: currentUser.email ?? barber.accountEmail,
+              }
+            : barber,
+        );
+        await saveOwnerBarbers(nextBarbers, currentUser);
+      } else {
+        const displayName =
+          typeof currentUser.user_metadata?.display_name === "string" &&
+          currentUser.user_metadata.display_name.trim()
+            ? currentUser.user_metadata.display_name.trim()
+            : currentUser.email?.split("@")[0]?.trim() || "Barbero";
+
+        await saveOwnerBarbers(
+          [
+            ...currentBarbers,
+            {
+              id: `auto-${currentUser.id}`,
+              name: displayName,
+              specialty: "Barbero",
+              active: true,
+              accountEmail: currentUser.email ?? undefined,
+              accountUserId: currentUser.id,
+            },
+          ],
+          currentUser,
+        );
+      }
+    }
+
     await setStoredActiveRole("barbero");
     router.replace("/barber/barber-my-agenda");
   };
@@ -94,41 +163,45 @@ export default function BarbersManagementScreen() {
     setModalVisible(true);
   };
 
-  const confirmRequestAction = async () => {
-    if (!selectedRequest || !pendingAction || isProcessing) {
-      return;
-    }
+  const closeRequestModal = () => {
+    if (isProcessing) return;
+    setModalVisible(false);
+    setSelectedRequest(null);
+    setPendingAction(null);
+    setActionReason("");
+  };
 
-    if (!actionReason.trim()) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Escribe un motivo para continuar.",
-      });
-      return;
-    }
+  const confirmRequestAction = async () => {
+    if (!selectedRequest || !pendingAction || isProcessing) return;
 
     setIsProcessing(true);
     try {
       const nextRequests = pendingRequests.filter(
         (item) => item.id !== selectedRequest.id,
       );
-
       setPendingRequests(nextRequests);
       await saveOwnerBarberRequests(nextRequests);
 
       if (pendingAction === "aprobar") {
-        const nextBarbers: OwnerBarber[] = [
-          ...barbers,
-          {
-            id: `barber-${Date.now()}`,
-            name: selectedRequest.name,
-            specialty: "Nuevo barbero",
-            active: true,
-          },
-        ];
-        setBarbers(nextBarbers);
-        await saveOwnerBarbers(nextBarbers);
+        const exists = barbers.some(
+          (item) =>
+            item.name.trim().toLowerCase() ===
+            selectedRequest.name.trim().toLowerCase(),
+        );
+
+        if (!exists) {
+          const nextBarbers = [
+            ...barbers,
+            {
+              id: `manual-${Date.now()}`,
+              name: selectedRequest.name,
+              specialty: "Barbero",
+              active: true,
+            } satisfies OwnerBarber,
+          ];
+          setBarbers(nextBarbers);
+          await saveOwnerBarbers(nextBarbers);
+        }
       }
 
       setToast({
@@ -136,132 +209,174 @@ export default function BarbersManagementScreen() {
         type: "success",
         message:
           pendingAction === "aprobar"
-            ? `${selectedRequest.name} aprobado`
-            : `${selectedRequest.name} rechazado`,
+            ? "Solicitud aprobada"
+            : "Solicitud rechazada",
       });
-      setModalVisible(false);
-      setSelectedRequest(null);
-      setPendingAction(null);
-      setActionReason("");
+      closeRequestModal();
+    } catch {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "No se pudo procesar la solicitud",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const closeAddModal = () => {
+    if (isProcessing) return;
+    setAddModalVisible(false);
+    setNewBarberName("");
+    setNewBarberEmail("");
+    setNewBarberSpecialty("");
+  };
+
+  const handleAddBarber = async () => {
+    if (isProcessing) return;
+
+    const trimmedName = newBarberName.trim();
+    const trimmedEmail = newBarberEmail.trim();
+    const trimmedSpecialty = newBarberSpecialty.trim();
+
+    if (!trimmedName) {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "Ingresa el nombre del barbero",
+      });
+      return;
+    }
+
+    if (trimmedEmail && !/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "Correo inválido",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const nextBarbers = [
+        ...barbers,
+        {
+          id: `manual-${Date.now()}`,
+          name: trimmedName,
+          specialty: trimmedSpecialty || "Barbero",
+          active: true,
+          accountEmail: trimmedEmail || undefined,
+        } satisfies OwnerBarber,
+      ];
+
+      setBarbers(nextBarbers);
+      await saveOwnerBarbers(nextBarbers);
+      closeAddModal();
+      setToast({
+        visible: true,
+        type: "success",
+        message: "Barbero agregado",
+      });
+    } catch {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "No se pudo agregar el barbero",
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const toggleBarberState = async (barberId: string) => {
-    if (isProcessing) {
-      return;
-    }
-
+    if (isProcessing) return;
     setIsProcessing(true);
-    const nextBarbers = barbers.map((barber) =>
-      barber.id === barberId ? { ...barber, active: !barber.active } : barber,
+    const nextBarbers = barbers.map((b) =>
+      b.id === barberId ? { ...b, active: !b.active } : b,
     );
     setBarbers(nextBarbers);
     await saveOwnerBarbers(nextBarbers);
-
-    const changed = nextBarbers.find((item) => item.id === barberId);
-    setToast({
-      visible: true,
-      type: "success",
-      message: `${changed?.name ?? "Barbero"} ${changed?.active ? "activado" : "desactivado"}`,
-    });
+    setToast({ visible: true, type: "success", message: "Estado actualizado" });
     setIsProcessing(false);
   };
 
-  const handleAddBarber = async () => {
+  const handleDeleteBarber = (barberId: string) => {
     if (isProcessing) {
       return;
     }
 
-    const normalizedEmail = newBarberEmail.trim().toLowerCase();
-    const normalizedName = newBarberName.trim();
-    const normalizedSpecialty = newBarberSpecialty.trim();
-
-    if (!normalizedEmail || !normalizedSpecialty) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Correo y especialidad son obligatorios",
-      });
-      return;
-    }
-
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
-    if (!isEmailValid) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Ingresa un correo valido",
-      });
-      return;
-    }
-
-    const alreadyLinked = barbers.some(
-      (item) => item.accountEmail?.toLowerCase() === normalizedEmail,
-    );
-    if (alreadyLinked) {
-      setToast({
-        visible: true,
-        type: "info",
-        message: "Esa cuenta ya esta vinculada",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    let accountUserId: string | undefined;
-    if (isSupabaseConfigured) {
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithOtp({
-          email: normalizedEmail,
-          options: {
-            shouldCreateUser: false,
-            emailRedirectTo: "barberia://auth/login",
+    Alert.alert(
+      "Eliminar barbero",
+      "Este barbero dejará de aparecer en tu equipo y no podrá ser asignado en reservas.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              const nextBarbers = barbers.filter(
+                (item) => item.id !== barberId,
+              );
+              setBarbers(nextBarbers);
+              await saveOwnerBarbers(nextBarbers);
+              setToast({
+                visible: true,
+                type: "success",
+                message: "Barbero eliminado",
+              });
+            } catch {
+              setToast({
+                visible: true,
+                type: "error",
+                message: "No se pudo eliminar el barbero",
+              });
+            } finally {
+              setIsProcessing(false);
+            }
           },
-        });
-
-      if (signInError) {
-        setToast({
-          visible: true,
-          type: "error",
-          message: "No se encontro una cuenta registrada con ese correo",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      accountUserId = signInData?.user?.id;
-    }
-
-    const nextBarbers: OwnerBarber[] = [
-      ...barbers,
-      {
-        id: accountUserId ?? `barber-account-${normalizedEmail}`,
-        name: normalizedName || normalizedEmail.split("@")[0] || "Barbero",
-        specialty: normalizedSpecialty,
-        active: true,
-        accountEmail: normalizedEmail,
-        accountUserId,
-      },
-    ];
-
-    setBarbers(nextBarbers);
-    await saveOwnerBarbers(nextBarbers);
-    setAddModalVisible(false);
-    setNewBarberName("");
-    setNewBarberEmail("");
-    setNewBarberSpecialty("");
-    setToast({
-      visible: true,
-      type: "success",
-      message: isSupabaseConfigured
-        ? "Barbero agregado con cuenta existente"
-        : "Barbero agregado y vinculado por correo",
-    });
-    setIsProcessing(false);
+        },
+      ],
+    );
   };
+
+  // Renderizado de items de barbero para evitar repetición
+  const renderBarberItem = (item: OwnerBarber) => (
+    <View key={item.id} style={styles.barberCard}>
+      <View style={styles.barberAvatarPlaceholder}>
+        <Text style={styles.avatarText}>
+          {item.name.charAt(0).toUpperCase()}
+        </Text>
+        {item.active && <View style={styles.onlineBadge} />}
+      </View>
+      <View style={styles.barberTextWrap}>
+        <Text style={styles.barberName}>{item.name}</Text>
+        <Text style={styles.barberRole}>{item.specialty}</Text>
+        {item.accountEmail && (
+          <Text style={styles.barberMeta}>{item.accountEmail}</Text>
+        )}
+      </View>
+      <View style={styles.barberActions}>
+        <Pressable
+          onPress={() => void toggleBarberState(item.id)}
+          style={[
+            styles.switchContainer,
+            item.active ? styles.switchOn : styles.switchOff,
+          ]}
+        >
+          <View style={styles.switchDot} />
+        </Pressable>
+        <Pressable
+          style={styles.deleteBarberButton}
+          onPress={() => handleDeleteBarber(item.id)}
+        >
+          <MaterialIcons name="delete-outline" size={18} color="#f07f7f" />
+        </Pressable>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.screen}>
@@ -269,7 +384,7 @@ export default function BarbersManagementScreen() {
         visible={toast.visible}
         message={toast.message}
         type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
 
       <View style={styles.topBar}>
@@ -277,143 +392,131 @@ export default function BarbersManagementScreen() {
           style={styles.iconButton}
           onPress={() => router.replace("/barber/owner-more-settings")}
         >
-          <MaterialIcons name="menu" size={22} color="#d4af37" />
+          <MaterialIcons name="sort" size={24} color="#d4af37" />
         </Pressable>
         <Text style={styles.brand}>NAVAJA DORADA</Text>
-        <View style={styles.avatarWrap}>
-          <Image
-            source={{
-              uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaCL-aJcoK2Zp25XLE-1FWroVng48nYGm_oVI80LrGLe0YgMHIw2QTzCFeGH_eNhzo1txC7GImg8Ke6ymFkoRbKELAtt-hxjB4Hhgb7XqNLJdC6HGnS2_zVWIpHv_13lCBjoMhK1vfotekwLa7ttUUaccnA1e36TaJH6ftKOAnW9YEtHmkQii4mqaHJtl9B-_10h_mIX8cMUvITC5l-3lz21FqgRxPpdnHtZRiity7wZBryrbJLIkvV2oa2DkcMmUU20fAXlxX58Z",
-            }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-        </View>
+        <Image
+          source={{
+            uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaCL-aJcoK2Zp25XLE-1FWroVng48nYGm_oVI80LrGLe0YgMHIw2QTzCFeGH_eNhzo1txC7GImg8Ke6ymFkoRbKELAtt-hxjB4Hhgb7XqNLJdC6HGnS2_zVWIpHv_13lCBjoMhK1vfotekwLa7ttUUaccnA1e36TaJH6ftKOAnW9YEtHmkQii4mqaHJtl9B-_10h_mIX8cMUvITC5l-3lz21FqgRxPpdnHtZRiity7wZBryrbJLIkvV2oa2DkcMmUU20fAXlxX58Z",
+          }}
+          style={styles.avatar}
+        />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Barberos</Text>
-
-        <View style={styles.featuredCard}>
-          <Text style={styles.featuredTitle}>Quieres atender vos mismo?</Text>
-          <Text style={styles.featuredText}>
-            Activa tu perfil de barbero para recibir turnos.
-          </Text>
-          <Pressable
-            style={styles.featuredButton}
-            onPress={() => {
-              void goBarberView();
-            }}
-          >
-            <Text style={styles.featuredButtonText}>Activar</Text>
-          </Pressable>
+        <View style={styles.headerSection}>
+          <Text style={styles.title}>Equipo</Text>
+          <Text style={styles.subtitle}>Gestiona el staff de tu barbería</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Barberos activos</Text>
-        {barbers.map((item) => (
-          <Pressable
-            key={item.id}
-            style={styles.barberCard}
-            disabled={isProcessing}
-            onPress={() => {
-              void toggleBarberState(item.id);
-            }}
-          >
-            <View style={styles.barberTextWrap}>
-              <Text style={styles.barberName}>{item.name}</Text>
-              <Text style={styles.barberRole}>{item.specialty}</Text>
-              {item.accountEmail ? (
-                <Text style={styles.barberMeta}>{item.accountEmail}</Text>
-              ) : null}
+        {/* FEATURED CARD: OWNER AS BARBER */}
+        <LinearGradient
+          colors={["#2a2a2a", "#1a1a1a"]}
+          style={styles.featuredCard}
+        >
+          <View style={styles.featuredContent}>
+            <View style={styles.featuredInfo}>
+              <Text style={styles.featuredTitle}>Tu Perfil</Text>
+              <Text style={styles.featuredText}>
+                Activa tu agenda personal para empezar a atender clientes hoy.
+              </Text>
             </View>
-            <View style={item.active ? styles.switchOn : styles.switchOff}>
-              <View style={styles.switchDot} />
-            </View>
+            <Pressable
+              style={[
+                styles.featuredButton,
+                ownerBarberActive && styles.featuredButtonDisabled,
+              ]}
+              onPress={() => void goBarberView()}
+              disabled={ownerBarberActive || isProcessing || isLoading}
+            >
+              <Text style={styles.featuredButtonText}>
+                {ownerBarberActive ? "Activo" : "Activar"}
+              </Text>
+            </Pressable>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Barberos Activos</Text>
+          <Pressable onPress={() => setAddModalVisible(true)}>
+            <Text style={styles.addText}>+ Agregar</Text>
           </Pressable>
-        ))}
+        </View>
 
         {isLoading ? (
           <View style={styles.skeletonList}>
-            {[0, 1, 2].map((item) => (
-              <View key={item} style={styles.skeletonCard}>
-                <View style={styles.skeletonTextWrap}>
-                  <Skeleton style={styles.skeletonName} />
-                  <Skeleton style={styles.skeletonRole} />
-                  <Skeleton style={styles.skeletonMeta} />
-                </View>
-                <Skeleton style={styles.skeletonSwitch} borderRadius={12} />
-              </View>
+            {[1, 2].map((i) => (
+              <Skeleton key={i} style={styles.skeletonCard} borderRadius={16} />
             ))}
           </View>
-        ) : null}
+        ) : (
+          barbers.map(renderBarberItem)
+        )}
 
-        <Pressable
-          style={styles.addBarberButton}
-          disabled={isProcessing}
-          onPress={() => setAddModalVisible(true)}
-        >
-          <MaterialIcons name="person-add" size={18} color="#f2ca50" />
-          <Text style={styles.addBarberText}>Agregar barbero manual</Text>
-        </Pressable>
-
-        <View style={styles.inviteCard}>
-          <MaterialIcons name="qr-code-scanner" size={28} color="#d4af37" />
-          <Text style={styles.inviteTitle}>Invitar nuevo barbero</Text>
-          <Text style={styles.inviteText}>
-            Genera un codigo para sumar un nuevo profesional.
-          </Text>
+        {/* INVITE SECTION */}
+        <View style={styles.inviteContainer}>
+          <View style={styles.inviteIconBox}>
+            <MaterialIcons name="vpn-key" size={24} color="#d4af37" />
+          </View>
+          <View style={styles.inviteTextContent}>
+            <Text style={styles.inviteTitle}>Nuevo Profesional</Text>
+            <Text style={styles.inviteDesc}>
+              Envía un código para que se unan.
+            </Text>
+          </View>
           <Pressable
-            style={styles.inviteButton}
-            disabled={isProcessing}
+            style={styles.inviteAction}
             onPress={() => router.push("/barber/invitation-code")}
           >
-            <Text style={styles.inviteButtonText}>
-              Generar codigo invitacion
-            </Text>
+            <MaterialIcons name="chevron-right" size={24} color="#f2ca50" />
           </Pressable>
         </View>
 
-        <Text style={styles.sectionTitle}>Solicitudes pendientes</Text>
-        {pendingRequests.length ? (
+        {/* REQUESTS SECTION */}
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+          Solicitudes
+        </Text>
+        {pendingRequests.length > 0 ? (
           pendingRequests.map((request) => (
             <View key={request.id} style={styles.requestCard}>
-              <Text style={styles.requestName}>{request.name}</Text>
+              <View style={styles.requestHeader}>
+                <MaterialIcons
+                  name="person-outline"
+                  size={20}
+                  color="#d4af37"
+                />
+                <Text style={styles.requestName}>{request.name}</Text>
+              </View>
               <View style={styles.requestActions}>
                 <Pressable
-                  style={styles.rejectButton}
-                  disabled={isProcessing}
+                  style={styles.rejectBtn}
                   onPress={() => openRequestModal(request, "rechazar")}
                 >
-                  <Text style={styles.rejectText}>Rechazar</Text>
+                  <Text style={styles.rejectBtnText}>Rechazar</Text>
                 </Pressable>
                 <Pressable
-                  style={styles.approveButton}
-                  disabled={isProcessing}
+                  style={styles.approveBtn}
                   onPress={() => openRequestModal(request, "aprobar")}
                 >
-                  <Text style={styles.approveText}>Aprobar</Text>
+                  <Text style={styles.approveBtnText}>Aprobar</Text>
                 </Pressable>
               </View>
             </View>
           ))
         ) : (
-          <View style={styles.emptyRequestsCard}>
-            <Text style={styles.emptyRequestsText}>
-              No hay solicitudes pendientes.
-            </Text>
+          <View style={styles.emptyCard}>
+            <MaterialIcons name="auto-awesome" size={20} color="#333" />
+            <Text style={styles.emptyText}>Todo al día por aquí.</Text>
           </View>
         )}
       </ScrollView>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <BarberRoleNav mode="owner" current="barberos" />
+
+      <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
@@ -421,38 +524,32 @@ export default function BarbersManagementScreen() {
                 ? "Aprobar solicitud"
                 : "Rechazar solicitud"}
             </Text>
-            <Text style={styles.modalSubtitle}>
-              {selectedRequest?.name ?? "-"}
-            </Text>
-
+            <Text style={styles.modalSubtitle}>{selectedRequest?.name}</Text>
             <TextInput
-              style={styles.reasonInput}
+              style={styles.modalInput}
+              placeholder={
+                pendingAction === "aprobar"
+                  ? "Nota opcional"
+                  : "Motivo (opcional)"
+              }
+              placeholderTextColor="#666"
               value={actionReason}
               onChangeText={setActionReason}
-              placeholder="Motivo de la accion"
-              placeholderTextColor="#777"
-              multiline
             />
-
-            <View style={styles.modalActions}>
+            <View style={styles.modalActionsRow}>
               <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  setModalVisible(false);
-                  setSelectedRequest(null);
-                  setPendingAction(null);
-                  setActionReason("");
-                }}
+                style={styles.modalBtnCancel}
+                onPress={closeRequestModal}
               >
-                <Text style={styles.modalCancelText}>Cancelar</Text>
+                <Text style={styles.modalBtnCancelText}>Cancelar</Text>
               </Pressable>
               <Pressable
-                style={styles.modalConfirmButton}
+                style={styles.modalBtnConfirm}
+                onPress={() => void confirmRequestAction()}
                 disabled={isProcessing}
-                onPress={confirmRequestAction}
               >
-                <Text style={styles.modalConfirmText}>
-                  {isProcessing ? "Procesando..." : "Confirmar"}
+                <Text style={styles.modalBtnConfirmText}>
+                  {pendingAction === "aprobar" ? "Aprobar" : "Rechazar"}
                 </Text>
               </Pressable>
             </View>
@@ -460,357 +557,299 @@ export default function BarbersManagementScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={addModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
+      <Modal visible={addModalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Agregar barbero</Text>
-
             <TextInput
-              style={styles.fieldInput}
+              style={styles.modalInput}
+              placeholder="Nombre"
+              placeholderTextColor="#666"
               value={newBarberName}
               onChangeText={setNewBarberName}
-              placeholder="Nombre (opcional)"
-              placeholderTextColor="#777"
             />
-
             <TextInput
-              style={styles.fieldInput}
+              style={styles.modalInput}
+              placeholder="Correo (opcional)"
+              placeholderTextColor="#666"
               value={newBarberEmail}
               onChangeText={setNewBarberEmail}
-              placeholder="Correo de la cuenta del barbero"
-              placeholderTextColor="#777"
-              autoCapitalize="none"
               keyboardType="email-address"
+              autoCapitalize="none"
             />
-
             <TextInput
-              style={styles.fieldInput}
+              style={styles.modalInput}
+              placeholder="Especialidad (opcional)"
+              placeholderTextColor="#666"
               value={newBarberSpecialty}
               onChangeText={setNewBarberSpecialty}
-              placeholder="Especialidad"
-              placeholderTextColor="#777"
             />
-
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  setAddModalVisible(false);
-                  setNewBarberName("");
-                  setNewBarberEmail("");
-                  setNewBarberSpecialty("");
-                }}
-              >
-                <Text style={styles.modalCancelText}>Cancelar</Text>
+            <View style={styles.modalActionsRow}>
+              <Pressable style={styles.modalBtnCancel} onPress={closeAddModal}>
+                <Text style={styles.modalBtnCancelText}>Cancelar</Text>
               </Pressable>
               <Pressable
-                style={styles.modalConfirmButton}
+                style={styles.modalBtnConfirm}
+                onPress={() => void handleAddBarber()}
                 disabled={isProcessing}
-                onPress={handleAddBarber}
               >
-                <Text style={styles.modalConfirmText}>
-                  {isProcessing ? "Guardando..." : "Agregar"}
-                </Text>
+                <Text style={styles.modalBtnConfirmText}>Guardar</Text>
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-
-      <BarberRoleNav mode="owner" current="barberos" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#1a1a1a" },
+  screen: { flex: 1, backgroundColor: "#0f0f0f" },
   topBar: {
-    height: 70,
+    height: 80,
+    paddingTop: 30,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(26,26,26,0.92)",
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#0f0f0f",
   },
   brand: {
     color: "#d4af37",
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 2,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 4,
   },
-  avatarWrap: {
+  avatar: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    overflow: "hidden",
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#4d4635",
+    borderColor: "#333",
   },
-  avatar: { width: "100%", height: "100%" },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 110,
-    gap: 12,
-  },
-  title: { color: "#e5e2e1", fontSize: 34, fontWeight: "800" },
+  iconButton: { padding: 4 },
+
+  content: { paddingHorizontal: 20, paddingBottom: 120 },
+  headerSection: { marginVertical: 20 },
+  title: { color: "#fff", fontSize: 32, fontWeight: "800" },
+  subtitle: { color: "#666", fontSize: 14, marginTop: 4 },
+
   featuredCard: {
-    borderRadius: 14,
-    backgroundColor: "#2a2a2a",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 25,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.22)",
-    padding: 16,
+    borderColor: "#333",
   },
-  featuredTitle: { color: "#e5e2e1", fontSize: 18, fontWeight: "700" },
-  featuredText: { color: "#d0c5af", fontSize: 13, marginTop: 4 },
+  featuredContent: { flexDirection: "row", alignItems: "center" },
+  featuredInfo: { flex: 1, paddingRight: 15 },
+  featuredTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  featuredText: { color: "#999", fontSize: 12, marginTop: 6, lineHeight: 18 },
   featuredButton: {
-    marginTop: 14,
-    minHeight: 42,
-    borderRadius: 11,
     backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: 20,
-  },
-  featuredButtonText: { color: "#241a00", fontSize: 14, fontWeight: "800" },
-  sectionTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  barberCard: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
+  },
+  featuredButtonText: { color: "#000", fontWeight: "800", fontSize: 13 },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  sectionTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  addText: { color: "#d4af37", fontSize: 14, fontWeight: "700" },
+
+  barberCard: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 18,
+    padding: 15,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#222",
   },
-  barberTextWrap: { flex: 1 },
-  barberName: { color: "#e5e2e1", fontSize: 16, fontWeight: "700" },
-  barberRole: { color: "#d0c5af", fontSize: 12, marginTop: 2 },
-  barberMeta: { color: "#99907c", fontSize: 11, marginTop: 3 },
-  switchOn: {
-    width: 42,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(212,175,55,0.25)",
+  barberAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#333",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 3,
-    alignItems: "flex-end",
   },
-  switchOff: {
-    width: 42,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(77,70,53,0.25)",
+  avatarText: { color: "#d4af37", fontSize: 18, fontWeight: "800" },
+  onlineBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#4CAF50",
+    borderWidth: 2,
+    borderColor: "#1a1a1a",
+  },
+  barberTextWrap: { flex: 1, marginLeft: 15 },
+  barberName: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  barberRole: {
+    color: "#d4af37",
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  barberMeta: { color: "#555", fontSize: 11, marginTop: 2 },
+
+  switchContainer: { width: 44, height: 24, borderRadius: 12, padding: 3 },
+  switchOn: { backgroundColor: "#d4af37", alignItems: "flex-end" },
+  switchOff: { backgroundColor: "#333", alignItems: "flex-start" },
+  barberActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  deleteBarberButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#3a2a2a",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 3,
-    alignItems: "flex-start",
+    backgroundColor: "#221515",
   },
   switchDot: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#f2ca50",
+    backgroundColor: "#fff",
   },
-  inviteCard: {
-    borderRadius: 14,
-    backgroundColor: "#20201f",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.24)",
-    padding: 16,
+  featuredButtonDisabled: {
+    backgroundColor: "#5a512f",
+    opacity: 0.75,
+  },
+
+  inviteContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-  },
-  inviteTitle: {
-    color: "#e5e2e1",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  inviteText: {
-    color: "#d0c5af",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  inviteButton: {
-    marginTop: 12,
-    minHeight: 42,
-    borderRadius: 11,
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#161616",
+    padding: 15,
+    borderRadius: 18,
+    marginTop: 10,
     borderWidth: 1,
-    borderColor: "rgba(212,175,55,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
+    borderStyle: "dashed",
+    borderColor: "#333",
   },
-  inviteButtonText: { color: "#f2ca50", fontSize: 13, fontWeight: "700" },
-  skeletonList: {
-    gap: 12,
-  },
-  skeletonCard: {
+  inviteIconBox: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  skeletonTextWrap: {
-    flex: 1,
-    gap: 6,
-  },
-  skeletonName: {
-    width: "48%",
-    height: 16,
-  },
-  skeletonRole: {
-    width: "35%",
-    height: 12,
-  },
-  skeletonMeta: {
-    width: "58%",
-    height: 11,
-  },
-  skeletonSwitch: {
-    width: 42,
-    height: 24,
-  },
-  loadingText: {
-    color: "#99907c",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  addBarberButton: {
-    minHeight: 42,
-    borderRadius: 10,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(212,175,55,0.22)",
-    flexDirection: "row",
+    backgroundColor: "#222",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
   },
-  addBarberText: {
-    color: "#f2ca50",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  inviteTextContent: { flex: 1, marginLeft: 12 },
+  inviteTitle: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  inviteDesc: { color: "#666", fontSize: 11, marginTop: 2 },
+
   requestCard: {
-    borderRadius: 12,
-    backgroundColor: "#2a2a2a",
-    borderLeftWidth: 2,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 18,
+    padding: 15,
+    marginTop: 12,
+    borderLeftWidth: 4,
     borderLeftColor: "#d4af37",
-    padding: 14,
+  },
+  requestHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
+    marginBottom: 12,
   },
-  requestName: { color: "#e5e2e1", fontSize: 15, fontWeight: "700" },
-  requestActions: { flexDirection: "row", gap: 8 },
-  rejectButton: {
+  requestName: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  requestActions: { flexDirection: "row", gap: 10 },
+  approveBtn: {
     flex: 1,
-    minHeight: 36,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rejectText: { color: "#d0c5af", fontSize: 12, fontWeight: "600" },
-  approveButton: {
-    flex: 1,
-    minHeight: 36,
-    borderRadius: 9,
+    height: 40,
     backgroundColor: "#d4af37",
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  approveText: { color: "#241a00", fontSize: 12, fontWeight: "800" },
-  emptyRequestsCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
+  approveBtnText: { color: "#000", fontWeight: "800", fontSize: 12 },
+  rejectBtn: {
+    flex: 1,
+    height: 40,
+    backgroundColor: "#222",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  emptyRequestsText: { color: "#d0c5af", fontSize: 13 },
+  rejectBtnText: { color: "#999", fontWeight: "600", fontSize: 12 },
+
+  emptyCard: { alignItems: "center", padding: 30, opacity: 0.5 },
+  emptyText: { color: "#666", fontSize: 13, marginTop: 10 },
+  skeletonCard: {
+    height: 80,
+    width: "100%",
+    marginBottom: 12,
+    backgroundColor: "#1a1a1a",
+  },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
-    padding: 22,
+    paddingHorizontal: 20,
   },
   modalCard: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
+    backgroundColor: "#151515",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
+    borderColor: "#2a2a2a",
     padding: 16,
-    gap: 10,
   },
-  modalTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
-  modalSubtitle: { color: "#d0c5af", fontSize: 13 },
-  reasonInput: {
-    minHeight: 84,
-    borderRadius: 10,
-    backgroundColor: "#0e0e0e",
+  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  modalSubtitle: {
+    color: "#bbb",
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  modalInput: {
+    backgroundColor: "#0f0f0f",
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    color: "#e5e2e1",
+    borderColor: "#2a2a2a",
+    color: "#fff",
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    textAlignVertical: "top",
+    height: 46,
+    marginBottom: 10,
   },
-  fieldInput: {
-    minHeight: 48,
-    borderRadius: 10,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    color: "#e5e2e1",
-    paddingHorizontal: 12,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  modalCancelButton: {
+  modalActionsRow: { flexDirection: "row", gap: 10, marginTop: 6 },
+  modalBtnCancel: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#4d4635",
+    borderColor: "#333",
     alignItems: "center",
     justifyContent: "center",
   },
-  modalCancelText: { color: "#d0c5af", fontSize: 13, fontWeight: "600" },
-  modalConfirmButton: {
+  modalBtnCancelText: { color: "#999", fontSize: 13, fontWeight: "700" },
+  modalBtnConfirm: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
   },
-  modalConfirmText: { color: "#241a00", fontSize: 13, fontWeight: "800" },
+  modalBtnConfirmText: { color: "#111", fontSize: 13, fontWeight: "800" },
 });

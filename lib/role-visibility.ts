@@ -26,7 +26,7 @@ const resolveVisibility = async (
     const byUserId = Boolean(userId) && barber.accountUserId === userId;
     const byEmail =
       Boolean(userEmail) && barber.accountEmail?.toLowerCase() === userEmail;
-    return byUserId || byEmail;
+    return (byUserId || byEmail) && barber.active;
   });
 
   const hasBarberRole = hasBarberLinked;

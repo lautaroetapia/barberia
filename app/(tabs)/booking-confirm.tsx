@@ -1,8 +1,14 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,7 +16,14 @@ import {
     View,
 } from "react-native";
 
-import { getBarberById, getServiceById } from "@/constants/booking-flow";
+import {
+    APPOINTMENT_SLOT_MINUTES,
+    createAppointment,
+    formatPrice,
+    getReservedDurationMinutes,
+    getShopBarberById,
+    getShopServiceById,
+} from "@/lib/booking-catalog";
 
 const pickFirst = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
@@ -23,8 +36,12 @@ export default function BookingConfirmScreen() {
     shopName?: string;
     serviceId?: string;
     barberId?: string;
+    resolvedBarberId?: string;
     dateLabel?: string;
+    dateIso?: string;
     time?: string;
+    serviceName?: string;
+    serviceDuration?: string;
   }>();
 
   const appointmentId = pickFirst(params.appointmentId);
@@ -32,303 +49,441 @@ export default function BookingConfirmScreen() {
   const shopId = pickFirst(params.shopId) ?? "shop-1";
   const shopName = pickFirst(params.shopName) ?? "Atelier Palermo";
   const serviceId = pickFirst(params.serviceId) ?? "service-haircut";
-  const barberId = pickFirst(params.barberId) ?? "barber-any";
+  const barberId =
+    pickFirst(params.resolvedBarberId) ??
+    pickFirst(params.barberId) ??
+    "barber-any";
   const dateLabel = pickFirst(params.dateLabel) ?? "Martes 16 de Octubre";
   const time = pickFirst(params.time) ?? "16:30";
+  const dateIso = pickFirst(params.dateIso) ?? new Date().toISOString();
+  const serviceName = pickFirst(params.serviceName) ?? "Servicio";
+  const serviceDuration = Number(pickFirst(params.serviceDuration) ?? "45");
 
-  const service = getServiceById(serviceId);
-  const barber = getBarberById(barberId);
+  const [service, setService] = useState<{
+    name: string;
+    price: number;
+    durationMinutes: number;
+  }>({
+    name: serviceName,
+    price: 0,
+    durationMinutes: serviceDuration,
+  });
+  const [barberName, setBarberName] = useState("Cualquier profesional");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [note, setNote] = useState("");
   const [reminder, setReminder] = useState(true);
 
-  const confirm = () => {
-    router.push({
-      pathname: "/(tabs)/booking-success",
-      params: {
-        appointmentId,
-        isReschedule: isReschedule ? "1" : "0",
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      const [serviceData, barberData] = await Promise.all([
+        getShopServiceById(shopId, serviceId),
+        barberId && barberId !== "barber-any"
+          ? getShopBarberById(shopId, barberId)
+          : Promise.resolve(null),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (serviceData) {
+        setService(serviceData);
+      }
+
+      setBarberName(
+        barberData?.name ??
+          (barberId === "barber-any" ? "Cualquier profesional" : "Barbero"),
+      );
+      setIsLoading(false);
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [barberId, serviceId, shopId]);
+
+  const startDateTime = useMemo(() => {
+    const selectedDate = new Date(dateIso);
+    const [hoursRaw, minutesRaw] = time.split(":");
+    selectedDate.setHours(Number(hoursRaw ?? 0), Number(minutesRaw ?? 0), 0, 0);
+    return selectedDate;
+  }, [dateIso, time]);
+
+  const endDateTime = useMemo(() => {
+    const reservedDurationMinutes = getReservedDurationMinutes(
+      service.durationMinutes || serviceDuration,
+    );
+    const next = new Date(startDateTime);
+    next.setMinutes(next.getMinutes() + reservedDurationMinutes);
+    return next;
+  }, [service.durationMinutes, serviceDuration, startDateTime]);
+
+  const reservedSlots = useMemo(
+    () =>
+      getReservedDurationMinutes(service.durationMinutes || serviceDuration) /
+      APPOINTMENT_SLOT_MINUTES,
+    [service.durationMinutes, serviceDuration],
+  );
+
+  const confirm = async () => {
+    setIsSaving(true);
+
+    try {
+      const appointmentIdResult = await createAppointment({
         shopId,
-        shopName,
-        serviceId,
         barberId,
-        dateLabel,
-        time,
-        reminder: reminder ? "1" : "0",
-      },
-    });
+        serviceId,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        notes: note,
+      });
+
+      router.replace({
+        pathname: "/(tabs)/booking-success",
+        params: {
+          appointmentId: appointmentIdResult ?? appointmentId,
+          isReschedule: isReschedule ? "1" : "0",
+          shopId,
+          shopName,
+          serviceId,
+          serviceName: service.name,
+          servicePrice: String(service.price),
+          barberId,
+          barberName,
+          resolvedBarberId: barberId,
+          dateLabel,
+          dateIso,
+          time,
+          reminder: reminder ? "1" : "0",
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo confirmar el turno. Intenta nuevamente.";
+      Alert.alert("No se pudo confirmar", message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={22} color="#e5e2e1" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Confirmar turno</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.progressWrap}>
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressDone]} />
-        <View style={[styles.progressStep, styles.progressActive]} />
-      </View>
-
-      <Text style={styles.stepText}>Paso 5 / 6</Text>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.screen}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryAccent} />
-
-          <View style={styles.row}>
-            <MaterialIcons name="storefront" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.label}>Barberia</Text>
-              <Text style={styles.value}>{shopName}</Text>
-            </View>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <MaterialIcons
+              name="keyboard-backspace"
+              size={26}
+              color="#D4AF37"
+            />
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Verificación</Text>
+            <Text style={styles.subtitle}>Casi hemos terminado</Text>
           </View>
+          <View style={styles.headerSpacer} />
+        </View>
 
-          <View style={styles.row}>
-            <MaterialIcons name="content-cut" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.label}>Servicio</Text>
-              <Text style={styles.value}>{service.name}</Text>
-            </View>
-            <Text style={styles.price}>{service.price}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <MaterialIcons name="person" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.label}>Barbero</Text>
-              <Text style={styles.value}>{barber.name}</Text>
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <MaterialIcons name="calendar-month" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.label}>Fecha y hora</Text>
-              <Text style={styles.value}>
-                {dateLabel} - {time} hs
-              </Text>
-            </View>
+        {/* PROGRESS BAR */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressContainer}>
+            {[1, 2, 3, 4, 5, 6].map((step) => (
+              <View
+                key={step}
+                style={[
+                  styles.progressStep,
+                  step < 5 && styles.progressDone,
+                  step === 5 && styles.progressActive,
+                ]}
+              />
+            ))}
           </View>
         </View>
 
-        <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Notas (opcional)</Text>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="Algun detalle adicional..."
-            placeholderTextColor="rgba(208, 197, 175, 0.45)"
-            style={styles.input}
-          />
-        </View>
-
-        <Pressable
-          style={styles.checkboxRow}
-          onPress={() => setReminder((v) => !v)}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.checkbox, reminder && styles.checkboxActive]}>
-            {reminder ? (
-              <MaterialIcons name="check" size={14} color="#3c2f00" />
-            ) : null}
+          <Text style={styles.sectionTitle}>Resumen del Turno</Text>
+
+          <View style={styles.ticketCard}>
+            <LinearGradient
+              colors={["#1C1C1C", "#141414"]}
+              style={styles.ticketGradient}
+            >
+              <View style={styles.summaryRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="content-cut" size={20} color="#D4AF37" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Servicio</Text>
+                  <Text style={styles.value}>{service.name}</Text>
+                </View>
+                <Text style={styles.priceHighlight}>
+                  {formatPrice(service.price)}
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.summaryRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="person" size={20} color="#D4AF37" />
+                </View>
+                <View>
+                  <Text style={styles.label}>Barbero</Text>
+                  <Text style={styles.value}>{barberName}</Text>
+                </View>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons
+                    name="event-available"
+                    size={20}
+                    color="#D4AF37"
+                  />
+                </View>
+                <View>
+                  <Text style={styles.label}>Cuándo</Text>
+                  <Text style={styles.value}>
+                    {dateLabel} • {time} hs
+                  </Text>
+                  <Text style={styles.metaValue}>
+                    {`Reserva: ${reservedSlots} turnos de ${APPOINTMENT_SLOT_MINUTES} min (${reservedSlots * APPOINTMENT_SLOT_MINUTES} min)`}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="location-on" size={20} color="#D4AF37" />
+                </View>
+                <View>
+                  <Text style={styles.label}>Dónde</Text>
+                  <Text style={styles.value}>{shopName}</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
-          <Text style={styles.checkboxText}>Recordarme este turno</Text>
-        </Pressable>
 
-        <Text style={styles.policyText}>
-          Al confirmar, aceptas nuestra politica de cancelacion. Cancelacion
-          gratuita hasta 24h antes del turno.
-        </Text>
-      </ScrollView>
+          <View style={styles.inputSection}>
+            <Text style={styles.inputTitle}>Preferencias Adicionales</Text>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="Ej: Solo rebajado a los costados, café sin azúcar..."
+              placeholderTextColor="#444"
+              multiline
+              numberOfLines={3}
+              style={styles.textArea}
+            />
+          </View>
 
-      <View style={styles.footer}>
-        <Pressable style={styles.confirmButton} onPress={confirm}>
-          <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
-        </Pressable>
-      </View>
-    </View>
+          <Pressable
+            style={styles.reminderRow}
+            onPress={() => setReminder((v) => !v)}
+          >
+            <View style={[styles.checkbox, reminder && styles.checkboxActive]}>
+              {reminder && (
+                <MaterialIcons name="check" size={16} color="#000" />
+              )}
+            </View>
+            <Text style={styles.reminderText}>
+              Activar recordatorio vía notificación
+            </Text>
+          </Pressable>
+
+          <View style={styles.policyBox}>
+            <MaterialIcons name="info-outline" size={16} color="#666" />
+            <Text style={styles.policyText}>
+              Podrás cancelar o reprogramar sin cargo hasta 24 horas antes de tu
+              cita.
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* FOOTER */}
+        <View style={styles.footer}>
+          <Pressable style={styles.confirmButton} onPress={confirm}>
+            {isSaving ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <>
+                <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
+                <MaterialIcons name="verified" size={20} color="#000" />
+              </>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
   header: {
-    height: 72,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
-  backButton: {
+  headerCenter: { alignItems: "center" },
+  backButton: { width: 44, height: 44, justifyContent: "center" },
+  headerTitle: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  subtitle: { color: "#666", fontSize: 11, fontWeight: "600", marginTop: 2 },
+  headerSpacer: { width: 44 },
+
+  progressSection: { paddingHorizontal: 25, marginTop: 10, marginBottom: 20 },
+  progressContainer: { flexDirection: "row", gap: 6, width: "100%" },
+  progressStep: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "#222",
+  },
+  progressDone: { backgroundColor: "rgba(212, 175, 55, 0.4)" },
+  progressActive: { backgroundColor: "#D4AF37" },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 25, paddingBottom: 140 },
+  sectionTitle: {
+    color: "#FFF",
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 20,
+  },
+
+  ticketCard: {
+    borderRadius: 24,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#1A1A1A",
+    marginBottom: 30,
+  },
+  ticketGradient: { padding: 20, gap: 18 },
+  summaryRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: "rgba(212, 175, 55, 0.08)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  headerTitle: {
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  progressWrap: {
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 20,
-    marginTop: 4,
-  },
-  progressStep: {
-    flex: 1,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "#1c1b1b",
-  },
-  progressDone: {
-    backgroundColor: "rgba(242, 202, 80, 0.35)",
-  },
-  progressActive: {
-    backgroundColor: "#f2ca50",
-  },
-  stepText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textAlign: "center",
-    marginTop: 10,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 130,
-    gap: 18,
-  },
-  summaryCard: {
-    borderRadius: 16,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    padding: 16,
-    gap: 14,
-    overflow: "hidden",
-  },
-  summaryAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "#d4af37",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
   },
   label: {
-    color: "#99907c",
+    color: "#555",
     fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  value: {
-    marginTop: 2,
-    color: "#e5e2e1",
-    fontSize: 16,
     fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  price: {
-    marginLeft: "auto",
-    color: "#f2ca50",
-    fontSize: 22,
-    fontWeight: "800",
+  value: { color: "#FFF", fontSize: 15, fontWeight: "700", marginTop: 2 },
+  metaValue: {
+    color: "#888",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
   },
-  fieldWrap: {
-    gap: 8,
+  priceHighlight: { color: "#D4AF37", fontSize: 22, fontWeight: "900" },
+  divider: { height: 1, backgroundColor: "#222", marginVertical: 4 },
+
+  inputSection: { marginBottom: 25 },
+  inputTitle: {
+    color: "#BBB",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 10,
+    paddingLeft: 5,
   },
-  fieldLabel: {
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  input: {
-    minHeight: 52,
-    borderRadius: 12,
+  textArea: {
+    backgroundColor: "#111",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#4d4635",
-    backgroundColor: "#0e0e0e",
-    paddingHorizontal: 12,
-    color: "#e5e2e1",
+    borderColor: "#222",
+    padding: 15,
+    color: "#FFF",
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: "top",
   },
-  checkboxRow: {
+
+  reminderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    marginBottom: 25,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#4d4635",
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#333",
+    backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#20201f",
   },
-  checkboxActive: {
-    borderColor: "#f2ca50",
-    backgroundColor: "#f2ca50",
+  checkboxActive: { backgroundColor: "#D4AF37", borderColor: "#D4AF37" },
+  reminderText: { color: "#BBB", fontSize: 14, fontWeight: "600" },
+
+  policyBox: {
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "#111",
+    padding: 15,
+    borderRadius: 16,
+    alignItems: "center",
   },
-  checkboxText: {
-    color: "#d0c5af",
-    fontSize: 14,
-  },
-  policyText: {
-    color: "#99907c",
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
-  },
+  policyText: { color: "#666", fontSize: 12, flex: 1, lineHeight: 18 },
+
   footer: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 22,
-    backgroundColor: "rgba(14, 14, 14, 0.96)",
+    paddingTop: 20,
+    paddingBottom: 40,
+    backgroundColor: "#0A0A0A",
+    borderTopWidth: 1,
+    borderColor: "#1A1A1A",
   },
   confirmButton: {
-    minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: "#d4af37",
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#D4AF37",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
-  confirmButtonText: {
-    color: "#3c2f00",
-    fontSize: 18,
-    fontWeight: "800",
-  },
+  confirmButtonText: { color: "#000", fontSize: 18, fontWeight: "900" },
 });

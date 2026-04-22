@@ -1,64 +1,50 @@
+import {
+    getClientAppointmentHistory,
+    type ClientAppointmentCard,
+} from "@/lib/booking-catalog";
 import { MaterialIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { AppToast } from "@/components/ui/app-toast";
 
-const AVATAR_URI =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDr2iu-Ibw2D9WqIviY12Ng8sofH5KqdBlrd6DnME1ESeElBgzqTektMzn8em1gtlT07r8XQKDvCb8jhkZ4KzCaIBmIPNn7167mSwGVUZS6reG2hcSvPCKpjpiPsp5rRrkq1NHzX6zJM0X9Y_CLZc62EdOMv-v2-mjiS6G9rC30lU2ANO90zSvfLITkknSLSL7MJVYsctBDhUHkqe0OC74xZZVNoLWHdio3Rqr2LtlCNKst1sPwsog39Mh8r8pB_BgJI-3fGDmH5bfY";
-
-const historyItems = [
-  {
-    id: "1",
-    service: "Corte de Autor",
-    barber: "Mateo",
-    date: "10 Oct",
-    status: "Completado",
-    statusColor: "#4ade80",
-    canRate: true,
-    stars: 0,
-  },
-  {
-    id: "2",
-    service: "Ritual de Barba",
-    barber: "Julian",
-    date: "25 Sep",
-    status: "Completado",
-    statusColor: "#4ade80",
-    canRate: false,
-    stars: 5,
-  },
-  {
-    id: "3",
-    service: "Corte & Barba",
-    barber: "Enzo",
-    date: "12 Sep",
-    status: "Cancelado",
-    statusColor: "#ffb4ab",
-    canRate: false,
-    stars: 0,
-  },
-  {
-    id: "4",
-    service: "Perfilado de Cejas",
-    barber: "Mateo",
-    date: "01 Sep",
-    status: "No-show",
-    statusColor: "#9a9485",
-    canRate: false,
-    stars: 0,
-  },
-];
+const AVATAR_URI = "https://i.pravatar.cc/150?u=lautaro";
 
 export default function BookingsHistoryScreen() {
+  const [history, setHistory] = useState<ClientAppointmentCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [ratedIds, setRatedIds] = useState<string[]>([]);
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({ visible: false, message: "", type: "info" });
+  const [toast, setToast] = useState({
+    visible: false,
+    message: "",
+    type: "info" as "success" | "info" | "error",
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    getClientAppointmentHistory()
+      .then((data) => {
+        if (mounted) setHistory(data);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleRate = (id: string) => {
     setToast({
@@ -71,351 +57,321 @@ export default function BookingsHistoryScreen() {
 
   return (
     <View style={styles.screen}>
+      <StatusBar barStyle="light-content" />
       <AppToast
         visible={toast.visible}
         message={toast.message}
         type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
 
-      <View style={styles.header}>
-        <Text style={styles.brandTitle}>NAVAJA DORADA</Text>
-        <View style={styles.avatarWrap}>
-          <Image
-            source={{ uri: AVATAR_URI }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-        </View>
-      </View>
-
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.pageHeader}>
+        {/* --- HEADER LIMPIO (Sin botones extras) --- */}
+        <View style={styles.header}>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.brandTitle}>
+              NAVAJA <Text style={styles.goldText}>DORADA</Text>
+            </Text>
+            <Image
+              source={{ uri: AVATAR_URI }}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          </View>
+        </View>
+
+        <View style={styles.mainContainer}>
           <Text style={styles.pageTitle}>Mis Turnos</Text>
-        </View>
 
-        <View style={styles.tabsNav}>
-          <Pressable
-            style={styles.tabInactive}
-            onPress={() => router.replace("/(tabs)/bookings")}
-          >
-            <Text style={styles.tabInactiveText}>Activos</Text>
-          </Pressable>
-          <Pressable style={styles.tabActive}>
-            <Text style={styles.tabActiveText}>Historial</Text>
-            <View style={styles.tabUnderline} />
-          </Pressable>
-        </View>
+          {/* --- TABS --- */}
+          <View style={styles.tabsNav}>
+            <Pressable
+              style={styles.tabInactive}
+              onPress={() => router.replace("/(tabs)/bookings")}
+            >
+              \<Text style={styles.tabInactiveText}>Activos</Text>
+            </Pressable>
+            <View style={styles.tabActive}>
+              <Text style={styles.tabActiveText}>Historial</Text>
+              <View style={styles.tabUnderline} />
+            </View>
+          </View>
 
-        <View style={styles.listWrap}>
-          {historyItems.map((item) => {
-            const isRated = item.stars > 0 || ratedIds.includes(item.id);
-
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.card,
-                  item.status === "Cancelado" && styles.cardSoft,
-                  item.status === "No-show" && styles.cardFaded,
-                ]}
+          {/* --- LISTA HISTORIAL --- */}
+          <View style={styles.listWrap}>
+            {loading ? (
+              <Text
+                style={{ color: "#999", textAlign: "center", marginTop: 40 }}
               >
-                {item.id === "1" ? <View style={styles.cardAccent} /> : null}
+                Cargando historial...
+              </Text>
+            ) : history.length === 0 ? (
+              <Text
+                style={{ color: "#999", textAlign: "center", marginTop: 40 }}
+              >
+                No tienes historial de turnos.
+              </Text>
+            ) : (
+              history.map((item) => {
+                const isRated = item.stars > 0 || ratedIds.includes(item.id);
+                const isCanceled =
+                  item.status === "Cancelado" || item.status === "No-show";
 
-                <View style={styles.rowTop}>
-                  <View>
-                    <Text style={styles.serviceTitle}>{item.service}</Text>
-                    <Text style={styles.barberText}>Con {item.barber}</Text>
-                  </View>
-
-                  <View style={styles.rightTop}>
-                    <Text style={styles.dateText}>{item.date}</Text>
-                    <Text
-                      style={[styles.statusText, { color: item.statusColor }]}
-                    >
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-
-                {item.status === "Completado" ? (
-                  <View style={styles.bottomRow}>
-                    <View style={styles.starsRow}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <MaterialIcons
-                          key={star}
-                          name="star"
-                          size={16}
-                          color={
-                            (isRated ? 5 : item.stars) >= star
-                              ? "#f2ca50"
-                              : "rgba(242, 202, 80, 0.42)"
-                          }
-                        />
-                      ))}
+                return (
+                  <View
+                    key={item.id}
+                    style={[styles.card, isCanceled && styles.cardCanceled]}
+                  >
+                    <View style={styles.cardHeader}>
+                      <View style={styles.titleColumn}>
+                        <Text
+                          style={[
+                            styles.serviceTitle,
+                            isCanceled && styles.textFaded,
+                          ]}
+                        >
+                          {item.service}
+                        </Text>
+                        <Text style={styles.barberText}>Con {item.barber}</Text>
+                      </View>
+                      <View style={styles.infoColumn}>
+                        <Text style={styles.dateText}>{item.date}</Text>
+                        <Text
+                          style={[
+                            styles.statusLabel,
+                            { color: item.statusColor },
+                          ]}
+                        >
+                          {item.status}
+                        </Text>
+                      </View>
                     </View>
 
-                    {!isRated && item.canRate ? (
-                      <Pressable
-                        style={styles.rateButton}
-                        onPress={() => handleRate(item.id)}
-                      >
-                        <Text style={styles.rateButtonText}>Calificar</Text>
-                      </Pressable>
-                    ) : (
-                      <Text style={styles.ratedText}>Calificado</Text>
+                    {item.status === "Completado" && (
+                      <View style={styles.ratingSection}>
+                        <View style={styles.starsRow}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <MaterialIcons
+                              key={star}
+                              name="star"
+                              size={18}
+                              color={
+                                (isRated ? item.stars || 5 : 0) >= star
+                                  ? "#D4AF37"
+                                  : "#222"
+                              }
+                            />
+                          ))}
+                        </View>
+
+                        {!isRated && item.canRate ? (
+                          <Pressable
+                            style={styles.btnRate}
+                            onPress={() => handleRate(item.id)}
+                          >
+                            <Text style={styles.btnRateText}>CALIFICAR</Text>
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.ratedLabel}>
+                            {isRated ? "CALIFICADO" : "SIN CALIFICAR"}
+                          </Text>
+                        )}
+                      </View>
                     )}
                   </View>
-                ) : null}
-              </View>
-            );
-          })}
+                );
+              })
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <MaterialIcons name="content-cut" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Atelier</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.replace("/(tabs)/explore")}
-        >
-          <MaterialIcons name="dry-cleaning" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Services</Text>
-        </Pressable>
-
-        <Pressable style={[styles.navItem, styles.navItemActive]}>
-          <MaterialIcons name="event-available" size={22} color="#d4af37" />
-          <Text style={styles.navTextActive}>Bookings</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/profile")}
-        >
-          <MaterialIcons name="person" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Profile</Text>
-        </Pressable>
+      {/* --- MENU INFERIOR FIJO --- */}
+      <View style={styles.bottomNavContainer}>
+        <BlurView intensity={90} tint="dark" style={styles.bottomNav}>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)")}
+          >
+            \
+            <MaterialIcons name="content-cut" size={24} color="#555" />
+            <Text style={styles.navText}>Atelier</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)/explore")}
+          >
+            \
+            <MaterialIcons name="grid-view" size={24} color="#555" />
+            <Text style={styles.navText}>Servicios</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)/bookings")}
+          >
+            \
+            <View style={styles.activeIndicator}>
+              <MaterialIcons name="event-available" size={22} color="#000" />
+            </View>
+            <Text style={styles.navTextActive}>Turnos</Text>
+          </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
+            \
+            <MaterialIcons name="person-outline" size={24} color="#555" />
+            <Text style={styles.navText}>Perfil</Text>
+          </Pressable>
+        </BlurView>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
+  goldText: { color: "#D4AF37", fontWeight: "900" },
   header: {
-    height: 66,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
+    paddingBottom: 15,
+  },
+  headerTopRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
   },
   brandTitle: {
-    color: "#d4af37",
-    fontSize: 21,
+    color: "#FFF",
+    fontSize: 14,
     letterSpacing: 3,
-    fontWeight: "800",
-  },
-  avatarWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.3)",
+    fontWeight: "400",
   },
   avatar: {
-    width: "100%",
-    height: "100%",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 130,
-  },
-  pageHeader: {
-    marginTop: 10,
-    marginBottom: 12,
-  },
+
+  scrollContent: { paddingBottom: 150 },
+  mainContainer: { paddingHorizontal: 24 },
   pageTitle: {
-    color: "#e5e2e1",
-    fontSize: 38,
-    lineHeight: 42,
+    color: "#FFF",
+    fontSize: 32,
     fontWeight: "800",
-  },
-  tabsNav: {
-    flexDirection: "row",
-    gap: 26,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(77, 70, 53, 0.25)",
+    marginTop: 10,
     marginBottom: 20,
   },
-  tabActive: {
-    paddingBottom: 10,
+
+  tabsNav: {
+    flexDirection: "row",
+    gap: 25,
+    marginBottom: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: "#161616",
   },
-  tabActiveText: {
-    color: "#f2ca50",
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  tabActive: { paddingBottom: 12 },
+  tabActiveText: { color: "#D4AF37", fontSize: 15, fontWeight: "700" },
   tabUnderline: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     height: 2,
-    backgroundColor: "#f2ca50",
+    backgroundColor: "#D4AF37",
   },
-  tabInactive: {
-    paddingBottom: 10,
-  },
-  tabInactiveText: {
-    color: "#d0c5af",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  listWrap: {
-    gap: 14,
-  },
+  tabInactive: { paddingBottom: 12 },
+  tabInactiveText: { color: "#555", fontSize: 15, fontWeight: "500" },
+
+  listWrap: { gap: 12 },
   card: {
-    backgroundColor: "#1c1b1b",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    overflow: "hidden",
+    backgroundColor: "#161616",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#222",
   },
-  cardSoft: {
-    opacity: 0.78,
-  },
-  cardFaded: {
-    opacity: 0.56,
-  },
-  cardAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: "#f2ca50",
-  },
-  rowTop: {
+  cardCanceled: { opacity: 0.5 },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingLeft: 8,
+    marginBottom: 15,
   },
+  titleColumn: { flex: 1 },
   serviceTitle: {
-    color: "#e5e2e1",
-    fontSize: 24,
-    lineHeight: 28,
+    color: "#FFF",
+    fontSize: 18,
     fontWeight: "700",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  barberText: {
-    color: "#d0c5af",
-    fontSize: 14,
-  },
-  rightTop: {
-    alignItems: "flex-end",
-  },
-  dateText: {
-    color: "#e5e2e1",
-    fontSize: 19,
-    fontWeight: "700",
-  },
-  statusText: {
-    marginTop: 2,
-    fontSize: 11,
-    letterSpacing: 1,
+  textFaded: { color: "#AAA", textDecorationLine: "line-through" },
+  barberText: { color: "#666", fontSize: 13 },
+  infoColumn: { alignItems: "flex-end" },
+  dateText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
+  statusLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 5,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
-    fontWeight: "600",
   },
-  bottomRow: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(77, 70, 53, 0.25)",
+
+  ratingSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingLeft: 8,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#222",
   },
-  starsRow: {
-    flexDirection: "row",
-    gap: 1,
-  },
-  rateButton: {
-    minHeight: 34,
-    borderRadius: 9,
+  starsRow: { flexDirection: "row", gap: 4 },
+  btnRate: {
+    backgroundColor: "#D4AF37",
     paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#d4af37",
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  rateButtonText: {
-    color: "#3c2f00",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  ratedText: {
-    color: "#d0c5af",
-    fontSize: 12,
+  btnRateText: { color: "#000", fontSize: 10, fontWeight: "900" },
+  ratedLabel: {
+    color: "#444",
+    fontSize: 10,
+    fontWeight: "700",
     fontStyle: "italic",
   },
+
+  bottomNavContainer: { position: "absolute", bottom: 35, left: 20, right: 20 },
   bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: "row",
+    backgroundColor: "rgba(20, 20, 20, 0.75)",
+    borderRadius: 35,
+    paddingVertical: 12,
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(19, 19, 19, 0.94)",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 28,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
   },
-  navItem: {
-    minWidth: 76,
-    borderRadius: 12,
+  navItem: { alignItems: "center", minWidth: 65 },
+  activeIndicator: {
+    backgroundColor: "#D4AF37",
+    width: 48,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    marginBottom: 4,
   },
-  navItemActive: {
-    backgroundColor: "#2a2a2a",
-  },
-  navText: {
-    marginTop: 4,
-    color: "#7f7766",
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "500",
-  },
+  navText: { color: "#555", fontSize: 10, fontWeight: "600", marginTop: 2 },
   navTextActive: {
-    marginTop: 4,
-    color: "#d4af37",
+    color: "#D4AF37",
     fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "700",
+    fontWeight: "800",
+    marginTop: 2,
   },
 });

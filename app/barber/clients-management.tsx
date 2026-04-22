@@ -1,4 +1,4 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -10,424 +10,401 @@ import {
     Text,
     TextInput,
     View,
+    KeyboardAvoidingView,
+    Platform,
 } from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
 import { OwnerToast } from "@/components/ui/owner-toast";
-import {
-    getBarberClientNote,
-    saveBarberClientNote,
-} from "@/lib/barber-client-notes";
+import { getBarberClientNote, saveBarberClientNote } from "@/lib/barber-client-notes";
 import { getOwnerAppointmentsMap } from "@/lib/owner-agenda";
 
 type ClientRow = {
-  name: string;
-  lastVisitLabel: string;
-  totalVisitsLabel: string;
-  hasPenalty: boolean;
-  noShows: number;
+    name: string;
+    totalVisits: number;
+    noShows: number;
+    hasPenalty: boolean;
+    lastVisitDateKey: string;
+    lastVisitLabel: string;
+    totalVisitsLabel: string;
+};
+
+const toDateValue = (dateKey: string) => {
+    const [year, month, day] = dateKey.split("-");
+    return Number(`${year}${month}${day}`);
 };
 
 const toDisplayDate = (dateKey: string) => {
-  const [year, month, day] = dateKey.split("-");
-  if (!year || !month || !day) {
-    return dateKey;
-  }
-
-  return `${day}/${month}/${year}`;
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString("es-AR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
 };
 
-const toDateValue = (key: string) => {
-  const [year, month, day] = key.split("-");
-  return Number(`${year}${month}${day}`);
-};
+type ToastType = "success" | "info" | "error";
 
 export default function ClientsManagementScreen() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [clients, setClients] = useState<ClientRow[]>([]);
-  const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
-  const [clientNote, setClientNote] = useState("");
-  const [isSavingNote, setIsSavingNote] = useState(false);
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({
-    visible: false,
-    message: "",
-    type: "info",
-  });
-
-  const loadClients = useCallback(async () => {
-    const appointmentsMap = await getOwnerAppointmentsMap();
-    const byClient = new Map<
-      string,
-      { visits: number; noShows: number; lastDate: string }
-    >();
-
-    Object.entries(appointmentsMap).forEach(([dateKey, appointments]) => {
-      appointments.forEach((appointment) => {
-        if (appointment.status === "libre") {
-          return;
-        }
-
-        const name = appointment.client.trim();
-        if (!name) {
-          return;
-        }
-
-        const existing = byClient.get(name) ?? {
-          visits: 0,
-          noShows: 0,
-          lastDate: dateKey,
-        };
-
-        existing.visits += 1;
-        if (appointment.status === "no_asistio") {
-          existing.noShows += 1;
-        }
-
-        if (toDateValue(dateKey) > toDateValue(existing.lastDate)) {
-          existing.lastDate = dateKey;
-        }
-
-        byClient.set(name, existing);
-      });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [clients, setClients] = useState<ClientRow[]>([]);
+    const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
+    const [clientNote, setClientNote] = useState("");
+    const [isSavingNote, setIsSavingNote] = useState(false);
+    const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType }>({
+        visible: false,
+        message: "",
+        type: "info",
     });
 
-    const nextClients: ClientRow[] = Array.from(byClient.entries())
-      .map(([name, value]) => ({
-        name,
-        lastVisitLabel: `Ultima visita: ${toDisplayDate(value.lastDate)}`,
-        totalVisitsLabel: `Total visitas: ${value.visits}`,
-        hasPenalty: value.noShows > 0,
-        noShows: value.noShows,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const loadClients = useCallback(async () => {
+        const appointmentsMap = await getOwnerAppointmentsMap();
+        const byClient = new Map<
+            string,
+            {
+                totalVisits: number;
+                noShows: number;
+                lastVisitDateKey: string;
+            }
+        >();
 
-    setClients(nextClients);
-  }, []);
+        Object.entries(appointmentsMap).forEach(([dateKey, appointments]) => {
+            appointments.forEach((appointment) => {
+                const clientName = appointment.client.trim();
+                if (!clientName || appointment.status === "libre" || clientName.toLowerCase() === "disponible") {
+                    return;
+                }
 
-  const openClientDetail = async (client: ClientRow) => {
-    setSelectedClient(client);
-    const note = await getBarberClientNote(client.name);
-    setClientNote(note);
-  };
+                const current = byClient.get(clientName) ?? {
+                    totalVisits: 0,
+                    noShows: 0,
+                    lastVisitDateKey: dateKey,
+                };
 
-  const handleSaveNote = async () => {
-    if (!selectedClient || isSavingNote) {
-      return;
-    }
+                current.totalVisits += 1;
+                if (appointment.status === "no_asistio") {
+                    current.noShows += 1;
+                }
 
-    setIsSavingNote(true);
-    try {
-      await saveBarberClientNote(selectedClient.name, clientNote.trim());
-      setToast({
-        visible: true,
-        message: "Nota guardada",
-        type: "success",
-      });
-    } finally {
-      setIsSavingNote(false);
-    }
-  };
+                if (toDateValue(dateKey) > toDateValue(current.lastVisitDateKey)) {
+                    current.lastVisitDateKey = dateKey;
+                }
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadClients();
-    }, [loadClients]),
-  );
+                byClient.set(clientName, current);
+            });
+        });
 
-  const filteredClients = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return clients;
-    }
+        const rows: ClientRow[] = Array.from(byClient.entries())
+            .map(([name, data]) => ({
+                name,
+                totalVisits: data.totalVisits,
+                noShows: data.noShows,
+                hasPenalty: data.noShows > 0,
+                lastVisitDateKey: data.lastVisitDateKey,
+                lastVisitLabel: `Ultima visita: ${toDisplayDate(data.lastVisitDateKey)}`,
+                totalVisitsLabel: `Total visitas: ${data.totalVisits}`,
+            }))
+            .sort((a, b) => toDateValue(b.lastVisitDateKey) - toDateValue(a.lastVisitDateKey));
 
-    return clients.filter((client) => {
-      const name = client.name.toLowerCase();
-      const meta1 = client.lastVisitLabel.toLowerCase();
-      const meta2 = client.totalVisitsLabel.toLowerCase();
-      return (
-        name.includes(normalizedQuery) ||
-        meta1.includes(normalizedQuery) ||
-        meta2.includes(normalizedQuery)
-      );
-    });
-  }, [searchQuery]);
+        setClients(rows);
+    }, []);
 
-  return (
-    <View style={styles.screen}>
-      <OwnerToast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
-      />
+    useFocusEffect(
+        useCallback(() => {
+            void loadClients();
+        }, [loadClients]),
+    );
 
-      <View style={styles.topBar}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.replace("/barber/barber-my-agenda")}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
-        </Pressable>
-        <Text style={styles.brand}>NAVAJA DORADA</Text>
-        <View style={styles.iconButton} />
-      </View>
+    const filteredClients = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) {
+            return clients;
+        }
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Clientes</Text>
-        <TextInput
-          style={styles.search}
-          placeholder="Buscar cliente..."
-          placeholderTextColor="#777"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        return clients.filter((client) => {
+            const inName = client.name.toLowerCase().includes(q);
+            const inDate = client.lastVisitLabel.toLowerCase().includes(q);
+            return inName || inDate;
+        });
+    }, [clients, searchQuery]);
 
-        {filteredClients.map((client) => (
-          <Pressable
-            key={client.name}
-            style={[
-              styles.clientCard,
-              client.hasPenalty && styles.clientCardWarning,
-            ]}
-            onPress={() => {
-              void openClientDetail(client);
-            }}
-          >
-            <View style={styles.initials}>
-              <Text style={styles.initialsText}>
-                {client.name
-                  .split(" ")
-                  .map((p) => p[0])
-                  .join("")}
-              </Text>
-            </View>
-            <View style={styles.clientBody}>
-              <Text style={styles.clientName}>{client.name}</Text>
-              <Text style={styles.clientMeta}>{client.lastVisitLabel}</Text>
-              <Text style={styles.clientMeta}>{client.totalVisitsLabel}</Text>
-              {client.hasPenalty ? (
-                <Text style={styles.badge}>PENALIZACION</Text>
-              ) : null}
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color="#99907c" />
-          </Pressable>
-        ))}
+    const openClientDetail = useCallback(async (client: ClientRow) => {
+        setSelectedClient(client);
+        const note = await getBarberClientNote(client.name);
+        setClientNote(note);
+    }, []);
 
-        {!filteredClients.length ? (
-          <View style={styles.emptyStateCard}>
-            <Text style={styles.emptyStateTitle}>
-              No se encontraron clientes
-            </Text>
-            <Text style={styles.emptyStateText}>
-              Ajusta tu busqueda e intenta de nuevo.
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
+    const handleSaveNote = useCallback(async () => {
+        if (!selectedClient || isSavingNote) {
+            return;
+        }
 
-      <Modal
-        visible={Boolean(selectedClient)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedClient(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {selectedClient?.name ?? "Cliente"}
-            </Text>
-            <Text style={styles.modalMeta}>
-              {selectedClient?.lastVisitLabel ?? "-"}
-            </Text>
-            <Text style={styles.modalMeta}>
-              {selectedClient?.totalVisitsLabel ?? "-"}
-            </Text>
-            <Text style={styles.modalMeta}>
-              No asistio: {selectedClient?.noShows ?? 0}
-            </Text>
+        setIsSavingNote(true);
+        try {
+            await saveBarberClientNote(selectedClient.name, clientNote.trim());
+            setToast({
+                visible: true,
+                message: "Nota guardada correctamente.",
+                type: "success",
+            });
+            setSelectedClient(null);
+        } catch {
+            setToast({
+                visible: true,
+                message: "No se pudo guardar la nota.",
+                type: "error",
+            });
+        } finally {
+            setIsSavingNote(false);
+        }
+    }, [clientNote, isSavingNote, selectedClient]);
 
-            <TextInput
-              style={styles.noteInput}
-              value={clientNote}
-              onChangeText={setClientNote}
-              placeholder="Notas internas del cliente"
-              placeholderTextColor="#777"
-              multiline
-              textAlignVertical="top"
+
+    return (
+        <View style={styles.screen}>
+            <OwnerToast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                onHide={() => setToast({ visible: false, message: "", type: "info" })}
             />
 
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => setSelectedClient(null)}
-              >
-                <Text style={styles.modalCancelText}>Cerrar</Text>
-              </Pressable>
-              <Pressable
-                style={styles.modalSaveButton}
-                disabled={isSavingNote}
-                onPress={() => {
-                  void handleSaveNote();
-                }}
-              >
-                <Text style={styles.modalSaveText}>
-                  {isSavingNote ? "Guardando..." : "Guardar nota"}
-                </Text>
-              </Pressable>
+            <View style={styles.topBar}>
+                <Pressable style={styles.backButton} onPress={() => router.replace("/barber/barber-my-agenda")}>
+                    <Feather name="chevron-left" size={24} color="#d4af37" />
+                </Pressable>
+                <Text style={styles.brand}>CLIENTES</Text>
+                <View style={{ width: 40 }} />
             </View>
-          </View>
-        </View>
-      </Modal>
 
-      <BarberRoleNav mode="barber" current="clientes" />
-    </View>
-  );
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Directorio</Text>
+                    <Text style={styles.subtitle}>{clients.length} clientes registrados</Text>
+                </View>
+
+                {/* SEARCH BAR */}
+                <View style={styles.searchContainer}>
+                    <Feather name="search" size={18} color="#555" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.search}
+                        placeholder="Nombre o fecha..."
+                        placeholderTextColor="#555"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
+
+                {/* CLIENT LIST */}
+                <View style={styles.listContainer}>
+                    {filteredClients.map((client) => (
+                        <Pressable
+                            key={client.name}
+                            style={styles.clientCard}
+                            onPress={() => void openClientDetail(client)}
+                        >
+                            <View style={[styles.avatar, client.hasPenalty && styles.avatarWarning]}>
+                                <Text style={[styles.avatarText, client.hasPenalty && styles.avatarTextWarning]}>
+                                    {client.name.split(" ").map(p => p[0]).join("").toUpperCase()}
+                                </Text>
+                            </View>
+                            
+                            <View style={styles.clientInfo}>
+                                <Text style={styles.clientName}>{client.name}</Text>
+                                <View style={styles.statsRow}>
+                                    <View style={styles.statItem}>
+                                        <Feather name="calendar" size={10} color="#777" />
+                                        <Text style={styles.clientMeta}>{client.lastVisitLabel.replace('Ultima visita: ', '')}</Text>
+                                    </View>
+                                    <View style={styles.statItem}>
+                                        <Feather name="check-circle" size={10} color="#d4af37" />
+                                        <Text style={styles.clientMeta}>{client.totalVisitsLabel.replace('Total visitas: ', '')} citas</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {client.hasPenalty && (
+                                <View style={styles.warningIcon}>
+                                    <MaterialIcons name="report-problem" size={18} color="#ffb4ab" />
+                                </View>
+                            )}
+                            <Feather name="chevron-right" size={18} color="#333" />
+                        </Pressable>
+                    ))}
+                </View>
+
+                {!filteredClients.length && (
+                    <View style={styles.emptyState}>
+                        <Feather name="users" size={48} color="#222" />
+                        <Text style={styles.emptyStateTitle}>Sin resultados</Text>
+                        <Text style={styles.emptyStateText}>No encontramos coincidencias para "{searchQuery}"</Text>
+                    </View>
+                )}
+            </ScrollView>
+
+            {/* MODAL DETALLE / NOTAS */}
+            <Modal
+                visible={Boolean(selectedClient)}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setSelectedClient(null)}
+            >
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
+                    <Pressable style={styles.modalDismiss} onPress={() => setSelectedClient(null)} />
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalIndicator} />
+                        
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>{selectedClient?.name}</Text>
+                                <Text style={styles.modalSubtitle}>Notas internas y recordatorios</Text>
+                            </View>
+                            {selectedClient?.hasPenalty && (
+                                <View style={styles.penaltyBadge}>
+                                    <Text style={styles.penaltyBadgeText}>{selectedClient.noShows} NO-SHOWS</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <TextInput
+                            style={styles.noteInput}
+                            value={clientNote}
+                            onChangeText={setClientNote}
+                            placeholder="Ej: Prefiere corte degradado bajo, no usar cera..."
+                            placeholderTextColor="#444"
+                            multiline
+                        />
+
+                        <View style={styles.modalFooter}>
+                            <Pressable style={styles.cancelButton} onPress={() => setSelectedClient(null)}>
+                                <Text style={styles.cancelButtonText}>Cerrar</Text>
+                            </Pressable>
+                            <Pressable 
+                                style={[styles.saveButton, isSavingNote && styles.saveButtonDisabled]} 
+                                onPress={() => void handleSaveNote()}
+                                disabled={isSavingNote}
+                            >
+                                <Text style={styles.saveButtonText}>
+                                    {isSavingNote ? "Guardando..." : "Guardar Nota"}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            <BarberRoleNav mode="barber" current="clientes" />
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
-  topBar: {
-    height: 70,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    color: "#d4af37",
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 110,
-    gap: 12,
-  },
-  title: { color: "#e5e2e1", fontSize: 34, fontWeight: "800" },
-  search: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    color: "#e5e2e1",
-    paddingHorizontal: 14,
-  },
-  clientCard: {
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.2)",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  clientCardWarning: { borderLeftWidth: 2, borderLeftColor: "#ffb4ab" },
-  initials: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#353535",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  initialsText: { color: "#e5e2e1", fontWeight: "700" },
-  clientBody: { flex: 1 },
-  clientName: { color: "#e5e2e1", fontSize: 16, fontWeight: "700" },
-  clientMeta: { color: "#d0c5af", fontSize: 11, marginTop: 2 },
-  badge: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    color: "#ffb4ab",
-    backgroundColor: "rgba(147,0,10,0.25)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  emptyStateCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.22)",
-    backgroundColor: "#1c1b1b",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    gap: 4,
-  },
-  emptyStateTitle: {
-    color: "#e5e2e1",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  emptyStateText: {
-    color: "#d0c5af",
-    fontSize: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
-    padding: 22,
-  },
-  modalCard: {
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 16,
-    gap: 8,
-  },
-  modalTitle: { color: "#e5e2e1", fontSize: 20, fontWeight: "800" },
-  modalMeta: { color: "#d0c5af", fontSize: 12 },
-  noteInput: {
-    minHeight: 110,
-    borderRadius: 10,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    color: "#e5e2e1",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 6,
-  },
-  modalActions: { flexDirection: "row", gap: 8, marginTop: 6 },
-  modalCancelButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#4d4635",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCancelText: { color: "#d0c5af", fontSize: 13, fontWeight: "600" },
-  modalSaveButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalSaveText: { color: "#241a00", fontSize: 13, fontWeight: "800" },
+    screen: { flex: 1, backgroundColor: "#080808" },
+    topBar: {
+        height: 100,
+        paddingTop: 45,
+        paddingHorizontal: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#111", alignItems: "center", justifyContent: "center" },
+    brand: { color: "#d4af37", fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+    
+    content: { paddingHorizontal: 20, paddingBottom: 120 },
+    header: { marginBottom: 20 },
+    title: { color: "#fff", fontSize: 32, fontWeight: "800" },
+    subtitle: { color: "#555", fontSize: 14, marginTop: 4 },
+
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: "#111",
+        borderRadius: 15,
+        paddingHorizontal: 15,
+        height: 50,
+        borderWidth: 1,
+        borderColor: "#1a1a1a",
+        marginBottom: 20,
+    },
+    searchIcon: { marginRight: 10 },
+    search: { flex: 1, color: "#fff", fontSize: 16 },
+
+    listContainer: { gap: 10 },
+    clientCard: {
+        backgroundColor: "#111",
+        borderRadius: 18,
+        padding: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#1a1a1a",
+    },
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 15,
+        backgroundColor: "#1a1a1a",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 15,
+        borderWidth: 1,
+        borderColor: "#222"
+    },
+    avatarWarning: { backgroundColor: "rgba(255, 68, 102, 0.1)", borderColor: "rgba(255, 68, 102, 0.2)" },
+    avatarText: { color: "#d4af37", fontWeight: "800", fontSize: 16 },
+    avatarTextWarning: { color: "#ff4466" },
+
+    clientInfo: { flex: 1, gap: 4 },
+    clientName: { color: "#fff", fontSize: 17, fontWeight: "700" },
+    statsRow: { flexDirection: 'row', gap: 12 },
+    statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    clientMeta: { color: "#555", fontSize: 12, fontWeight: "600" },
+    warningIcon: { marginRight: 10 },
+
+    emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60, gap: 10 },
+    emptyStateTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+    emptyStateText: { color: "#555", textAlign: 'center' },
+
+    // Modal Styles
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: "rgba(0,0,0,0.8)" },
+    modalDismiss: { flex: 1 },
+    modalContent: {
+        backgroundColor: "#111",
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        padding: 25,
+        paddingTop: 15,
+        borderWidth: 1,
+        borderColor: "#222",
+    },
+    modalIndicator: { width: 40, height: 4, backgroundColor: "#333", borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+    modalTitle: { color: "#fff", fontSize: 24, fontWeight: "800" },
+    modalSubtitle: { color: "#555", fontSize: 14 },
+    penaltyBadge: { backgroundColor: "rgba(255, 68, 102, 0.1)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    penaltyBadgeText: { color: "#ff4466", fontSize: 10, fontWeight: "900" },
+
+    noteInput: {
+        backgroundColor: "#080808",
+        borderRadius: 20,
+        padding: 20,
+        color: "#fff",
+        fontSize: 16,
+        minHeight: 150,
+        borderWidth: 1,
+        borderColor: "#1a1a1a",
+        textAlignVertical: 'top',
+        marginBottom: 20,
+    },
+    modalFooter: { flexDirection: 'row', gap: 10 },
+    cancelButton: { flex: 1, height: 55, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: "#1a1a1a" },
+    cancelButtonText: { color: "#fff", fontWeight: "700" },
+    saveButton: { flex: 2, height: 55, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: "#d4af37" },
+    saveButtonText: { color: "#000", fontWeight: "900", textTransform: 'uppercase' },
+    saveButtonDisabled: { opacity: 0.5 }
 });

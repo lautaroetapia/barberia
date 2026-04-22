@@ -26,9 +26,9 @@ type DbShiftPreference = {
 };
 
 const defaultPreferences: ShiftPreferences = {
-  morning: true,
-  afternoon: true,
-  night: true,
+  morning: false,
+  afternoon: false,
+  night: false,
 };
 
 const getDateKey = (date: Date) => {

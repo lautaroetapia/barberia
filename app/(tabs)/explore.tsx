@@ -1,148 +1,117 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import type { User } from "@supabase/supabase-js";
+import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+    Dimensions,
     ImageBackground,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
     View,
+    type DimensionValue,
 } from "react-native";
 
+import { getPublicBarbershops } from "@/lib/booking-catalog";
 import { getFavoriteShops, toggleFavoriteShop } from "@/lib/favorites";
 import { supabase } from "@/lib/supabase";
-import {
-    getGoogleAvatarFromProviderToken,
-    getUserAvatarUri,
-    isGoogleUser,
-} from "@/lib/user-avatar";
+import { getUserAvatarUri } from "@/lib/user-avatar";
+
+const { width } = Dimensions.get("window");
 
 const MAP_BG_URI =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBXgwhuCuUG5-2SjKMlHcDbtz8HpqLDGz7AXPJfY1eNcOX8djunn_5afjCU3ye98w1MVguEdqWUzZMF-Ik0MjfWasPOnpbsp-MMUCLAHva1OLbcT4aTQpJP6w0DUv-A1-Co6M2rO5OthVRVrflD3fI-HHduMhXk1yk4aXKvqzGMQl6SgKf0JjIuJZpsavtG8pi978FJCIQ15vDAA91mNIwhqEwNG0qtYS7f43sogd50Vm-og7ovX7JGAH4gzoxi-uoqh-8vWjcysyPc";
-
+  "https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000";
 const AVATAR_URI =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuB5K5kdbyuEE_FlvnVdNnzEKphuX61-x7ZOaZe2Ra9MI9HCdhZysRZi31zDYGwXSotfERsL82PB8ZxiZ3JDIFXHQxdVxZWGsyfBCzesIO2Oj9jmMffDenCrZrM0taYgQP_rwe5h3UPAR8wC6qyGJ1tynpypJeOjJBpQFe1u1AT8MwHwj5PVszkuK0KoVIyEpDgekvO029AeaTR3wj0fyFW8wQ_CEGzbAFVMlkZjQBxxBbunx2D0reO1j_TwSu4N5ebAc6Ky-uNVxZvQ";
 
-const mapAteliers = [
-  {
-    id: "shop-1",
-    name: "Atelier Palermo",
-    address: "Av. Santa Fe 3200",
-    rating: "4.8",
-    reviews: "124",
-    top: "32%",
-    left: "25%",
-  },
-  {
-    id: "shop-2",
-    name: "Atelier Belgrano",
-    address: "Cabildo 1850",
-    rating: "4.7",
-    reviews: "96",
-    top: "49%",
-    right: "24%",
-  },
-  {
-    id: "shop-3",
-    name: "Atelier Recoleta",
-    address: "Av. Pueyrredon 2100",
-    rating: "4.9",
-    reviews: "203",
-    left: "50%",
-    bottom: "34%",
-  },
-] as const;
+type MapAtelier = {
+  id: string;
+  name: string;
+  address: string;
+  rating: string;
+  reviews: string;
+  image: string;
+  top?: DimensionValue;
+  left?: DimensionValue;
+  right?: DimensionValue;
+  bottom?: DimensionValue;
+};
 
 export default function MapViewScreen() {
+  const [ateliers, setAteliers] = useState<MapAtelier[]>([]);
   const [showSelectedCard, setShowSelectedCard] = useState(true);
-  const [selectedShopId, setSelectedShopId] = useState(mapAteliers[0].id);
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [favoriteShopIds, setFavoriteShopIds] = useState<string[]>([]);
   const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
 
-  useFocusEffect(() => {
-    let isMounted = true;
+  // --- CARGAR BARBERIAS Y FAVORITOS ---
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      const loadData = async () => {
+        const shops = await getPublicBarbershops();
+        if (isMounted && shops) {
+          const mapped = shops.map((shop, i) => {
+            const positions: {
+              top?: DimensionValue;
+              left?: DimensionValue;
+              right?: DimensionValue;
+              bottom?: DimensionValue;
+            }[] = [
+              { top: "35%", left: "20%" },
+              { top: "25%", right: "15%" },
+              { left: "45%", bottom: "45%" },
+              { top: "50%", left: "10%" },
+              { bottom: "30%", right: "25%" },
+            ];
+            const pos = positions[i % positions.length];
+            return {
+              id: shop.id,
+              name: shop.name,
+              address: shop.address,
+              rating: shop.rating,
+              reviews: shop.reviews,
+              image: shop.logoUrl,
+              ...pos,
+            };
+          });
+          setAteliers(mapped);
+          if (!selectedShopId && mapped.length > 0) {
+            setSelectedShopId(mapped[0].id);
+          }
+        }
 
-    const loadFavorites = async () => {
-      const favorites = await getFavoriteShops();
+        const favorites = await getFavoriteShops();
+        if (isMounted) setFavoriteShopIds(favorites.map((item) => item.id));
+      };
+      void loadData();
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
 
-      if (!isMounted) {
-        return;
-      }
-
-      setFavoriteShopIds(favorites.map((item) => item.id));
-    };
-
-    void loadFavorites();
-
-    return () => {
-      isMounted = false;
-    };
-  });
-
+  // --- CARGAR USUARIO ---
   useEffect(() => {
     let isMounted = true;
-
     const applyUserData = async (user: User | null) => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData.session?.user ?? null;
-      const userForAvatar = sessionUser ?? user;
-
-      const resolvedAvatar = getUserAvatarUri(userForAvatar, AVATAR_URI);
-      setAvatarUri(resolvedAvatar);
-
-      if (!isGoogleUser(userForAvatar)) {
-        return;
-      }
-
-      const googleAvatar = await getGoogleAvatarFromProviderToken(
-        sessionData.session?.provider_token,
-      );
-
-      if (!isMounted || !googleAvatar) {
-        return;
-      }
-
-      setAvatarUri(googleAvatar);
+      setAvatarUri(getUserAvatarUri(user, AVATAR_URI));
     };
 
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        if (!isMounted) {
-          return;
-        }
-
-        void applyUserData(data.user ?? null);
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-
-        void applyUserData(null);
-      });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) {
-        return;
-      }
-
-      void applyUserData(session?.user ?? null);
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted) void applyUserData(data.user ?? null);
     });
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
   const selectedAtelier =
-    mapAteliers.find((atelier) => atelier.id === selectedShopId) ??
-    mapAteliers[0];
+    ateliers.find((a) => a.id === selectedShopId) ?? ateliers[0];
 
   return (
     <View style={styles.screen}>
@@ -153,8 +122,11 @@ export default function MapViewScreen() {
         <View style={styles.mapOverlay} />
       </ImageBackground>
 
+      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.brand}>NAVAJA DORADA</Text>
+        <Text style={styles.brand}>
+          NAVAJA <Text style={styles.gold}>DORADA</Text>
+        </Text>
         <View style={styles.avatarWrap}>
           <Image
             source={{ uri: avatarUri }}
@@ -164,9 +136,13 @@ export default function MapViewScreen() {
         </View>
       </View>
 
+      {/* SELECTOR MAPA/LISTA */}
       <View style={styles.toggleWrap}>
-        <View style={styles.toggleContainer}>
-          <Pressable style={styles.toggleActive}>
+        <BlurView intensity={30} tint="dark" style={styles.toggleContainer}>
+          <Pressable
+            style={styles.toggleActive}
+            onPress={() => router.replace("/(tabs)/explore")}
+          >
             <Text style={styles.toggleActiveText}>Mapa</Text>
           </Pressable>
           <Pressable
@@ -175,13 +151,14 @@ export default function MapViewScreen() {
           >
             <Text style={styles.toggleInactiveText}>Lista</Text>
           </Pressable>
-        </View>
+        </BlurView>
       </View>
 
+      {/* PIN LAYER */}
       <View style={styles.pinLayer} pointerEvents="box-none">
-        {mapAteliers.map((atelier) => {
-          const isSelected = atelier.id === selectedAtelier.id;
-
+        {ateliers.map((atelier) => {
+          const isSelected =
+            selectedAtelier && atelier.id === selectedAtelier.id;
           return (
             <Pressable
               key={atelier.id}
@@ -199,352 +176,278 @@ export default function MapViewScreen() {
                 setShowSelectedCard(true);
               }}
             >
-              <MaterialIcons
-                name="location-on"
-                size={isSelected ? 42 : 34}
-                color={isSelected ? "#d4af37" : "#4d4635"}
-              />
-              <View
-                style={
-                  isSelected ? styles.pinShadowLarge : styles.pinShadowSmall
-                }
-              />
+              <View style={[styles.pinDot, isSelected && styles.pinDotActive]}>
+                <MaterialIcons
+                  name="content-cut"
+                  size={isSelected ? 18 : 14}
+                  color={isSelected ? "#000" : "#D4AF37"}
+                />
+              </View>
+              {isSelected && <View style={styles.pinPulse} />}
             </Pressable>
           );
         })}
       </View>
 
-      {showSelectedCard ? (
-        <View style={styles.selectedCardWrap}>
-          <View style={styles.selectedCard}>
-            <View style={styles.cardTopRow}>
+      {/* TARJETA DETALLE SELECCIONADO */}
+      {showSelectedCard && selectedAtelier && (
+        <View style={styles.cardContainer}>
+          <BlurView intensity={80} tint="dark" style={styles.selectedCard}>
+            <View style={styles.cardHeader}>
               <View>
                 <Text style={styles.cardTitle}>{selectedAtelier.name}</Text>
                 <View style={styles.cardAddressRow}>
-                  <MaterialIcons name="map" size={13} color="#d0c5af" />
+                  <MaterialIcons name="location-on" size={12} color="#D4AF37" />
                   <Text style={styles.cardAddress}>
                     {selectedAtelier.address}
                   </Text>
                 </View>
               </View>
-
-              <View style={styles.cardActionsRight}>
-                <Pressable
-                  style={styles.favoriteButton}
-                  onPress={() => {
-                    void toggleFavoriteShop({
-                      id: selectedAtelier.id,
-                      name: selectedAtelier.name,
-                      address: selectedAtelier.address,
-                    }).then((result) => {
-                      setFavoriteShopIds(
-                        result.favorites.map((item) => item.id),
-                      );
-                    });
-                  }}
-                >
-                  <MaterialIcons
-                    name={
-                      favoriteShopIds.includes(selectedAtelier.id)
-                        ? "favorite"
-                        : "favorite-border"
-                    }
-                    size={18}
-                    color="#f2ca50"
-                  />
-                </Pressable>
-
-                <Pressable onPress={() => setShowSelectedCard(false)}>
-                  <MaterialIcons name="close" size={20} color="#d0c5af" />
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={() => {
+                  toggleFavoriteShop(selectedAtelier).then((res) =>
+                    setFavoriteShopIds(res.favorites.map((f) => f.id)),
+                  );
+                }}
+                style={styles.favCircle}
+              >
+                <MaterialIcons
+                  name={
+                    favoriteShopIds.includes(selectedAtelier.id)
+                      ? "favorite"
+                      : "favorite-border"
+                  }
+                  size={20}
+                  color="#D4AF37"
+                />
+              </Pressable>
             </View>
 
-            <View style={styles.ratingRow}>
-              <View style={styles.starsRow}>
-                <MaterialIcons name="star" size={12} color="#f2ca50" />
-                <MaterialIcons name="star" size={12} color="#f2ca50" />
-                <MaterialIcons name="star" size={12} color="#f2ca50" />
-                <MaterialIcons name="star" size={12} color="#f2ca50" />
-                <MaterialIcons name="star-half" size={12} color="#f2ca50" />
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <MaterialIcons name="star" size={14} color="#D4AF37" />
+                <Text style={styles.statText}>
+                  {selectedAtelier.rating} ({selectedAtelier.reviews})
+                </Text>
               </View>
-              <Text style={styles.ratingText}>
-                {selectedAtelier.rating} ({selectedAtelier.reviews})
-              </Text>
-              <Text style={styles.dot}>•</Text>
-              <Text style={styles.openText}>Abierto</Text>
+              <Text style={styles.statDivider}>•</Text>
+              <Text style={styles.openText}>ABIERTO</Text>
             </View>
 
             <Pressable
-              style={styles.servicesButton}
+              style={styles.actionButton}
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/booking-service",
-                  params: {
-                    shopId: selectedAtelier.id,
-                    shopName: selectedAtelier.name,
-                  },
+                  params: { shopId: selectedAtelier.id },
                 })
               }
             >
-              <Text style={styles.servicesButtonText}>Ver servicios</Text>
+              <Text style={styles.actionButtonText}>VER SERVICIOS</Text>
+              <MaterialIcons name="chevron-right" size={20} color="#000" />
             </Pressable>
-          </View>
+          </BlurView>
         </View>
-      ) : null}
+      )}
 
-      <View style={styles.bottomNav}>
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <MaterialIcons name="content-cut" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Atelier</Text>
-        </Pressable>
+      {/* --- MENU INFERIOR COMPLETO --- */}
+      <View style={styles.bottomNavContainer}>
+        <BlurView intensity={90} tint="dark" style={styles.bottomNav}>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.replace("/(tabs)")}
+          >
+            <MaterialIcons name="content-cut" size={22} color="#555" />
+            <Text style={styles.navText}>Atelier</Text>
+          </Pressable>
 
-        <Pressable style={[styles.navItem, styles.navItemActive]}>
-          <MaterialIcons name="dry-cleaning" size={22} color="#d4af37" />
-          <Text style={styles.navTextActive}>Services</Text>
-        </Pressable>
+          <View style={styles.navItem}>
+            <View style={styles.activeIndicator}>
+              <MaterialIcons name="grid-view" size={22} color="#000" />
+            </View>
+            <Text style={styles.navTextActive}>Servicios</Text>
+          </View>
 
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/bookings")}
-        >
-          <MaterialIcons name="event-available" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Bookings</Text>
-        </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/bookings")}
+          >
+            <MaterialIcons name="event-note" size={22} color="#555" />
+            <Text style={styles.navText}>Turnos</Text>
+          </Pressable>
 
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/(tabs)/profile")}
-        >
-          <MaterialIcons name="person" size={22} color="#7f7766" />
-          <Text style={styles.navText}>Profile</Text>
-        </Pressable>
+          <Pressable
+            style={styles.navItem}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
+            <MaterialIcons name="person-outline" size={22} color="#555" />
+            <Text style={styles.navText}>Perfil</Text>
+          </Pressable>
+        </BlurView>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-    overflow: "hidden",
-  },
-  mapBackground: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  screen: { flex: 1, backgroundColor: "#000" },
+  mapBackground: { ...StyleSheet.absoluteFillObject },
   mapOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(19, 19, 19, 0.55)",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
+  gold: { color: "#D4AF37", fontWeight: "900" },
   header: {
-    height: 74,
-    paddingTop: 10,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    zIndex: 10,
   },
-  brand: {
-    color: "#d4af37",
-    fontSize: 22,
-    letterSpacing: 3,
-    fontWeight: "800",
-  },
+  brand: { color: "#FFF", fontSize: 18, letterSpacing: 2, fontWeight: "300" },
   avatarWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    overflow: "hidden",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
-    backgroundColor: "#353535",
+    borderColor: "#D4AF37",
+    overflow: "hidden",
   },
-  avatar: {
-    width: "100%",
-    height: "100%",
-  },
-  toggleWrap: {
-    alignItems: "center",
-    marginTop: 6,
-  },
+  avatar: { width: "100%", height: "100%" },
+
+  toggleWrap: { alignItems: "center", marginTop: 15, zIndex: 10 },
   toggleContainer: {
     flexDirection: "row",
     padding: 4,
-    borderRadius: 999,
-    backgroundColor: "#0e0e0e",
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
   },
   toggleActive: {
-    paddingHorizontal: 26,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: "#d4af37",
+    paddingHorizontal: 25,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#D4AF37",
   },
-  toggleActiveText: {
-    color: "#3c2f00",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  toggleInactive: {
-    paddingHorizontal: 26,
-    paddingVertical: 9,
-  },
-  toggleInactiveText: {
-    color: "#d0c5af",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  pinLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  toggleActiveText: { color: "#000", fontWeight: "700", fontSize: 12 },
+  toggleInactive: { paddingHorizontal: 25, paddingVertical: 8 },
+  toggleInactiveText: { color: "#888", fontWeight: "600", fontSize: 12 },
+
+  pinLayer: { ...StyleSheet.absoluteFillObject },
   pinWrap: {
     position: "absolute",
     alignItems: "center",
+    justifyContent: "center",
   },
-  pinShadowSmall: {
-    marginTop: -2,
-    width: 10,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  pinDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#121212",
+    borderWidth: 2,
+    borderColor: "#D4AF37",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  pinShadowLarge: {
-    marginTop: -3,
-    width: 12,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
+  pinDotActive: {
+    backgroundColor: "#D4AF37",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
-  selectedCardWrap: {
+  pinPulse: {
     position: "absolute",
-    left: "50%",
-    bottom: "40%",
-    marginLeft: -144,
-    width: 288,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(212, 175, 55, 0.2)",
   },
+
+  cardContainer: { position: "absolute", bottom: 140, left: 20, right: 20 },
   selectedCard: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "rgba(53, 53, 53, 0.72)",
+    borderRadius: 28,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.25)",
+    borderColor: "rgba(255,255,255,0.15)",
+    overflow: "hidden",
   },
-  cardTopRow: {
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 10,
   },
-  cardActionsRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  favoriteButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(14,14,14,0.55)",
-  },
-  cardTitle: {
-    color: "#e5e2e1",
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
+  cardTitle: { color: "#FFF", fontSize: 20, fontWeight: "800" },
   cardAddressRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
+    marginTop: 4,
   },
-  cardAddress: {
-    color: "#d0c5af",
-    fontSize: 12,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-    marginBottom: 12,
-  },
-  starsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 1,
-  },
-  ratingText: {
-    color: "#d0c5af",
-    fontSize: 10,
-  },
-  dot: {
-    color: "#4d4635",
-    fontSize: 10,
-  },
-  openText: {
-    color: "#d4af37",
-    fontSize: 10,
-  },
-  servicesButton: {
-    minHeight: 42,
-    borderRadius: 12,
+  cardAddress: { color: "#AAA", fontSize: 12 },
+  favCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#d4af37",
   },
-  servicesButtonText: {
-    color: "#3c2f00",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+  statsRow: {
     flexDirection: "row",
+    alignItems: "center",
+    marginTop: 15,
+    gap: 10,
+  },
+  statItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  statText: { color: "#FFF", fontSize: 12, fontWeight: "600" },
+  statDivider: { color: "#444" },
+  openText: { color: "#00C851", fontSize: 11, fontWeight: "800" },
+  actionButton: {
+    backgroundColor: "#D4AF37",
+    height: 50,
+    borderRadius: 18,
+    marginTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  actionButtonText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+
+  bottomNavContainer: { position: "absolute", bottom: 35, left: 20, right: 20 },
+  bottomNav: {
+    flexDirection: "row",
+    borderRadius: 35,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(19, 19, 19, 0.94)",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 28,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
   },
-  navItem: {
-    minWidth: 76,
-    borderRadius: 12,
+  navItem: { alignItems: "center", minWidth: 65 },
+  activeIndicator: {
+    backgroundColor: "#D4AF37",
+    width: 48,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    marginBottom: 4,
   },
-  navItemActive: {
-    backgroundColor: "#2a2a2a",
-  },
-  navText: {
-    marginTop: 4,
-    color: "#7f7766",
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "500",
-  },
+  navText: { color: "#777", fontSize: 10, fontWeight: "600", marginTop: 2 },
   navTextActive: {
-    marginTop: 4,
-    color: "#d4af37",
+    color: "#D4AF37",
     fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    fontWeight: "700",
+    fontWeight: "800",
+    marginTop: 2,
   },
 });

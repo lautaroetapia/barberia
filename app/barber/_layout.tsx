@@ -1,6 +1,5 @@
 import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useEffect } from "react";
 
 import { getRoleVisibilityForCurrentUser } from "@/lib/role-visibility";
 
@@ -28,52 +27,40 @@ const BARBER_ROUTES = new Set([
 export default function BarberLayout() {
   const router = useRouter();
   const segments = useSegments();
-  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const validateAccess = async () => {
-      const currentRoute = segments[1] ?? "";
-      if (!currentRoute) {
-        if (isMounted) {
-          setIsCheckingAccess(false);
+      try {
+        const currentRoute = segments[1] ?? "";
+        if (!currentRoute) {
+          return;
         }
+
+        const visibility = await getRoleVisibilityForCurrentUser();
+
+        if (OWNER_ROUTES.has(currentRoute) && !visibility.hasOwnerRole) {
+          router.replace("/(tabs)/profile");
+          return;
+        }
+
+        if (BARBER_ROUTES.has(currentRoute) && !visibility.hasBarberRole) {
+          router.replace("/(tabs)/profile");
+          return;
+        }
+      } catch {
+        router.replace("/(tabs)");
         return;
-      }
-
-      const visibility = await getRoleVisibilityForCurrentUser();
-
-      if (OWNER_ROUTES.has(currentRoute) && !visibility.hasOwnerRole) {
-        router.replace("/(tabs)/profile");
-        return;
-      }
-
-      if (BARBER_ROUTES.has(currentRoute) && !visibility.hasBarberRole) {
-        router.replace("/(tabs)/profile");
-        return;
-      }
-
-      if (isMounted) {
-        setIsCheckingAccess(false);
       }
     };
 
-    setIsCheckingAccess(true);
     void validateAccess();
 
     return () => {
       isMounted = false;
     };
   }, [router, segments]);
-
-  if (isCheckingAccess) {
-    return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#d4af37" />
-      </View>
-    );
-  }
 
   return (
     <Stack
@@ -84,12 +71,3 @@ export default function BarberLayout() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: "#131313",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

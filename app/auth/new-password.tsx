@@ -11,289 +11,318 @@ import {
     Text,
     TextInput,
     View,
+    SafeAreaView,
+    Dimensions
 } from "react-native";
 
 import { AppToast } from "@/components/ui/app-toast";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
+const { width } = Dimensions.get("window");
+
 export default function NewPasswordScreen() {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [toast, setToast] = useState<{
-    visible: boolean;
-    message: string;
-    type: "success" | "info" | "error";
-  }>({ visible: false, message: "", type: "info" });
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: "success" | "info" | "error";
+    }>({ visible: false, message: "", type: "info" });
 
-  const handleResetPassword = async () => {
-    if (!isSupabaseConfigured) {
-      setToast({
-        visible: true,
-        type: "error",
-        message: "Falta configurar Supabase para restablecer contrasena.",
-      });
-      return;
-    }
+    const handleResetPassword = async () => {
+        if (!isSupabaseConfigured) {
+            setToast({
+                visible: true,
+                type: "error",
+                message: "Configuración de Supabase pendiente.",
+            });
+            return;
+        }
 
-    if (!newPassword || !confirmPassword) {
-      setErrorMessage("Completa ambos campos.");
-      return;
-    }
+        if (!newPassword || !confirmPassword) {
+            setErrorMessage("Por favor, completa ambos campos.");
+            return;
+        }
 
-    if (newPassword.length < 6) {
-      setErrorMessage("La contrasena debe tener al menos 6 caracteres.");
-      return;
-    }
+        if (newPassword.length < 6) {
+            setErrorMessage("La contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
 
-    if (newPassword !== confirmPassword) {
-      setErrorMessage("Las contrasenas no coinciden.");
-      return;
-    }
+        if (newPassword !== confirmPassword) {
+            setErrorMessage("Las contraseñas no coinciden.");
+            return;
+        }
 
-    setErrorMessage("");
-    setIsResetting(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setIsResetting(false);
+        setErrorMessage("");
+        setIsResetting(true);
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        setIsResetting(false);
 
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
+        if (error) {
+            // Manejo amable de errores de Supabase
+            if (error.message.includes("Password should be different")) {
+                setErrorMessage("La nueva contraseña debe ser diferente a la anterior.");
+            } else {
+                setErrorMessage("Ocurrió un error. Inténtalo de nuevo más tarde.");
+            }
+            return;
+        }
 
-    setToast({
-      visible: true,
-      type: "success",
-      message: "Contrasena actualizada. Ya puedes iniciar sesion.",
-    });
-    router.replace("/auth/login");
-  };
+        setToast({
+            visible: true,
+            type: "success",
+            message: "Contraseña actualizada correctamente.",
+        });
+        
+        // Pequeño delay para que el usuario vea el éxito antes de redirigir
+        setTimeout(() => {
+            router.replace("/auth/login");
+        }, 1500);
+    };
 
-  return (
-    <View style={styles.screen}>
-      <AppToast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={() => setToast({ visible: false, message: "", type: "info" })}
-      />
-
-      <StatusBar style="light" />
-
-      <View style={styles.header}>
-        <Pressable
-          style={styles.headerButton}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Volver"
-        >
-          <MaterialIcons name="arrow-back" size={25} color="#e5e2e1" />
-        </Pressable>
-
-        <Text style={styles.headerTitle}>Crear nueva contrasena</Text>
-
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <KeyboardAvoidingView
-        style={styles.main}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <Text style={styles.description}>
-          Ingresa tu nueva clave para acceder a tu cuenta.
-        </Text>
-
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <MaterialIcons
-              name="lock"
-              size={22}
-              color="#99907c"
-              style={styles.leftIcon}
+    return (
+        <SafeAreaView style={styles.screen}>
+            <AppToast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                onHide={() => setToast({ visible: false, message: "", type: "info" })}
             />
-            <TextInput
-              value={newPassword}
-              onChangeText={setNewPassword}
-              style={styles.textInput}
-              placeholder="Nueva contrasena"
-              placeholderTextColor="rgba(153, 144, 124, 0.7)"
-              secureTextEntry={!showNewPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <Pressable
-              style={styles.rightIconButton}
-              onPress={() => setShowNewPassword((prev) => !prev)}
-              accessibilityRole="button"
-              accessibilityLabel="Mostrar u ocultar nueva contrasena"
+
+            <StatusBar style="light" />
+
+            {/* HEADER LIMPIO CON BOTÓN DORADO */}
+            <View style={styles.header}>
+                <Pressable
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                    accessibilityRole="button"
+                    accessibilityLabel="Volver"
+                >
+                    <MaterialIcons name="chevron-left" size={34} color="#D4AF37" />
+                </Pressable>
+            </View>
+
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
             >
-              <MaterialIcons
-                name={showNewPassword ? "visibility" : "visibility-off"}
-                size={22}
-                color="#99907c"
-              />
-            </Pressable>
-          </View>
+                {/* SECCIÓN DE TEXTO */}
+                <View style={styles.topSection}>
+                    <Text style={styles.title}>Nueva{"\n"}Contraseña</Text>
+                    <Text style={styles.subtitle}>
+                        Crea una clave segura que no hayas usado antes en esta cuenta.
+                    </Text>
+                </View>
 
-          <View style={styles.inputGroup}>
-            <MaterialIcons
-              name="lock"
-              size={22}
-              color="#99907c"
-              style={styles.leftIcon}
-            />
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              style={styles.textInput}
-              placeholder="Confirmar contrasena"
-              placeholderTextColor="rgba(153, 144, 124, 0.7)"
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <Pressable
-              style={styles.rightIconButton}
-              onPress={() => setShowConfirmPassword((prev) => !prev)}
-              accessibilityRole="button"
-              accessibilityLabel="Mostrar u ocultar confirmacion de contrasena"
-            >
-              <MaterialIcons
-                name={showConfirmPassword ? "visibility" : "visibility-off"}
-                size={22}
-                color="#99907c"
-              />
-            </Pressable>
-          </View>
-        </View>
+                {/* FORMULARIO ESTILO PREMIUM */}
+                <View style={styles.form}>
+                    {/* INPUT 1 - NUEVA CONTRASEÑA */}
+                    <View style={styles.inputWrapper}>
+                        <MaterialIcons name="lock-outline" size={20} color="#666" style={styles.icon} />
+                        <TextInput
+                            value={newPassword}
+                            onChangeText={(text) => {
+                                setNewPassword(text);
+                                if (errorMessage) setErrorMessage("");
+                            }}
+                            style={styles.input}
+                            placeholder="Nueva contraseña"
+                            placeholderTextColor="#555"
+                            secureTextEntry={!showNewPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            returnKeyType="next"
+                        />
+                        <Pressable 
+                            onPress={() => setShowNewPassword(!showNewPassword)}
+                            style={styles.eyeIcon}
+                            accessibilityRole="button"
+                            accessibilityLabel={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                            <MaterialIcons 
+                                name={showNewPassword ? "visibility" : "visibility-off"} 
+                                size={20} 
+                                color={showNewPassword ? "#D4AF37" : "#444"} 
+                            />
+                        </Pressable>
+                    </View>
 
-        <View style={styles.actionArea}>
-          <Pressable
-            style={[styles.primaryButton, isResetting && styles.buttonDisabled]}
-            onPress={handleResetPassword}
-            disabled={isResetting}
-          >
-            {isResetting ? (
-              <ActivityIndicator color="#3c2f00" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Restablecer</Text>
-            )}
-          </Pressable>
+                    {/* INPUT 2 - CONFIRMAR CONTRASEÑA */}
+                    <View style={styles.inputWrapper}>
+                        <MaterialIcons name="lock-reset" size={20} color="#666" style={styles.icon} />
+                        <TextInput
+                            value={confirmPassword}
+                            onChangeText={(text) => {
+                                setConfirmPassword(text);
+                                if (errorMessage) setErrorMessage("");
+                            }}
+                            style={styles.input}
+                            placeholder="Confirmar contraseña"
+                            placeholderTextColor="#555"
+                            secureTextEntry={!showConfirmPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            returnKeyType="done"
+                            onSubmitEditing={handleResetPassword}
+                        />
+                        <Pressable 
+                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={styles.eyeIcon}
+                            accessibilityRole="button"
+                            accessibilityLabel={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                            <MaterialIcons 
+                                name={showConfirmPassword ? "visibility" : "visibility-off"} 
+                                size={20} 
+                                color={showConfirmPassword ? "#D4AF37" : "#444"} 
+                            />
+                        </Pressable>
+                    </View>
 
-          {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          ) : null}
-        </View>
-      </KeyboardAvoidingView>
-    </View>
-  );
+                    {errorMessage ? (
+                        <View style={styles.errorContainer}>
+                            <MaterialIcons name="error-outline" size={14} color="#FF5252" />
+                            <Text style={styles.errorText}>{errorMessage}</Text>
+                        </View>
+                    ) : null}
+
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.submitButton,
+                            pressed && styles.buttonPressed,
+                            isResetting && styles.buttonDisabled
+                        ]}
+                        onPress={handleResetPassword}
+                        disabled={isResetting}
+                    >
+                        {isResetting ? (
+                            <ActivityIndicator color="#000" />
+                        ) : (
+                            <>
+                                <Text style={styles.submitButtonText}>Actualizar Contraseña</Text>
+                                <MaterialIcons name="check-circle" size={20} color="#000" />
+                            </>
+                        )}
+                    </Pressable>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
-  header: {
-    height: 74,
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "#e5e2e1",
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 0.1,
-    marginRight: 8,
-  },
-  headerSpacer: {
-    width: 40,
-    height: 40,
-  },
-  main: {
-    flex: 1,
-    paddingTop: 28,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  description: {
-    color: "#99907c",
-    fontSize: 16,
-    lineHeight: 26,
-    marginBottom: 40,
-  },
-  form: {
-    gap: 28,
-  },
-  inputGroup: {
-    minHeight: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: "#99907c",
-    justifyContent: "center",
-    paddingLeft: 36,
-    paddingRight: 36,
-    position: "relative",
-  },
-  leftIcon: {
-    position: "absolute",
-    left: 0,
-    top: 16,
-  },
-  rightIconButton: {
-    position: "absolute",
-    right: 0,
-    top: 14,
-    padding: 2,
-  },
-  textInput: {
-    color: "#e5e2e1",
-    fontSize: 19,
-    paddingVertical: 9,
-  },
-  actionArea: {
-    flex: 1,
-    justifyContent: "flex-end",
-    paddingTop: 28,
-  },
-  primaryButton: {
-    minHeight: 58,
-    borderRadius: 12,
-    backgroundColor: "#f2ca50",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#f2ca50",
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  primaryButtonText: {
-    color: "#3c2f00",
-    fontSize: 21,
-    fontWeight: "800",
-  },
-  errorText: {
-    color: "#ffb4ab",
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.75,
-  },
+    screen: {
+        flex: 1,
+        backgroundColor: "#0A0A0A", // Negro más profundo
+    },
+    header: {
+        height: 60,
+        paddingHorizontal: 16,
+        justifyContent: 'center',
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 5,
+    },
+    container: {
+        flex: 1,
+        paddingHorizontal: 30,
+    },
+    topSection: {
+        marginTop: 20,
+        marginBottom: 40,
+    },
+    title: {
+        color: "#FFF",
+        fontSize: 36,
+        fontWeight: "900",
+        lineHeight: 42,
+        letterSpacing: -1.5,
+    },
+    subtitle: {
+        color: "#888", // Gris medio para lectura suave
+        fontSize: 16,
+        marginTop: 15,
+        lineHeight: 24,
+        fontWeight: '400',
+    },
+    form: {
+        gap: 16,
+    },
+    inputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#111", // Fondo del input ligeramente más claro que el screen
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#222",
+        paddingHorizontal: 18,
+        height: 64,
+    },
+    icon: {
+        marginRight: 12,
+    },
+    input: {
+        flex: 1,
+        color: "#FFF",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    eyeIcon: {
+        padding: 8, // Área de toque más grande para el icono de ojo
+        marginRight: -5,
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        paddingLeft: 4,
+    },
+    errorText: {
+        color: "#FF5252",
+        fontSize: 13,
+        fontWeight: "500",
+    },
+    submitButton: {
+        height: 64,
+        borderRadius: 18,
+        backgroundColor: "#D4AF37", // Dorado principal
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 25,
+        gap: 10,
+        // Sombra dorada premium sutil
+        shadowColor: "#D4AF37",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    buttonPressed: {
+        transform: [{ scale: 0.98 }], // Efecto de hundimiento
+        opacity: 0.9,
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+        backgroundColor: "#555",
+        shadowOpacity: 0,
+    },
+    submitButtonText: {
+        color: "#000", // Texto negro sobre dorado
+        fontSize: 17,
+        fontWeight: "800",
+        letterSpacing: -0.2,
+    },
 });

@@ -1,4 +1,4 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Calendar from "expo-calendar";
 import { Image } from "expo-image";
@@ -7,13 +7,13 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
@@ -21,11 +21,13 @@ import { OwnerToast } from "@/components/ui/owner-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { clearStoredActiveRole, setStoredActiveRole } from "@/lib/active-role";
 import {
-    getBarberPreferences,
-    saveBarberPreferences,
+  getBarberPreferences,
+  saveBarberPreferences,
+  saveNotificationPushToken,
 } from "@/lib/barber-preferences";
 import { getRoleVisibilityForCurrentUser } from "@/lib/role-visibility";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { uploadUserAvatar } from "@/lib/user-avatar";
 
 const LOCAL_BARBER_PROFILE_KEY = "barber_profile_local";
 
@@ -59,7 +61,6 @@ export default function BarberProfileScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadProfile = async () => {
       try {
         if (isSupabaseConfigured) {
@@ -67,65 +68,50 @@ export default function BarberProfileScreen() {
           const user = data.user;
           if (user && isMounted) {
             const metadata = user.user_metadata as Record<string, unknown>;
-            const nextName =
-              typeof metadata?.display_name === "string" &&
-              metadata.display_name.trim().length > 0
-                ? metadata.display_name
-                : (user.email?.split("@")[0] ?? "Barbero");
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, avatar_url, notifications_enabled")
+              .eq("id", user.id)
+              .maybeSingle<{
+                full_name: string | null;
+                avatar_url: string | null;
+                notifications_enabled: boolean | null;
+              }>();
 
-            const nextPhone =
-              typeof metadata?.phone === "string" ? metadata.phone : "";
-            const nextAvatar =
-              typeof metadata?.avatar_url === "string"
-                ? metadata.avatar_url
-                : "";
+            // 🔁 Corrección: lógica separada para evitar error de sintaxis
+            const fallbackFromEmail = user.email?.split("@")[0] ?? "Barbero";
+            const nameFromMetadata = typeof metadata?.display_name === "string"
+              ? metadata.display_name
+              : fallbackFromEmail;
 
-            setFullName(nextName);
+            const finalFullName = profile?.full_name?.trim() || nameFromMetadata;
+            setFullName(finalFullName);
+            // Fin de la corrección
+
             setEmail(user.email ?? "-");
-            setPhone(nextPhone);
-            setAvatarUri(nextAvatar);
+            setPhone(typeof metadata?.phone === "string" ? metadata.phone : "");
+            setAvatarUri(
+              profile?.avatar_url ??
+              (typeof metadata?.avatar_url === "string"
+                ? metadata.avatar_url
+                : "")
+            );
+
+            if (typeof profile?.notifications_enabled === "boolean") {
+              setNotificationsEnabled(profile.notifications_enabled);
+            }
           }
         }
-
-        const localRaw = await AsyncStorage.getItem(LOCAL_BARBER_PROFILE_KEY);
-        if (!localRaw || !isMounted) {
-          return;
-        }
-
-        const localProfile = JSON.parse(
-          localRaw,
-        ) as Partial<LocalBarberProfile>;
-        if (
-          typeof localProfile.fullName === "string" &&
-          localProfile.fullName
-        ) {
-          setFullName(localProfile.fullName);
-        }
-        if (typeof localProfile.email === "string" && localProfile.email) {
-          setEmail(localProfile.email);
-        }
-        if (typeof localProfile.phone === "string") {
-          setPhone(localProfile.phone);
-        }
-        if (typeof localProfile.avatarUri === "string") {
-          setAvatarUri(localProfile.avatarUri);
-        }
-
         const preferences = await getBarberPreferences();
         setNotificationsEnabled(preferences.notificationsEnabled);
         setCalendarSyncEnabled(preferences.calendarSyncEnabled);
-
         const visibility = await getRoleVisibilityForCurrentUser();
         setHasOwnerRole(visibility.hasOwnerRole);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
-
     void loadProfile();
-
     return () => {
       isMounted = false;
     };
@@ -142,20 +128,13 @@ export default function BarberProfileScreen() {
   }, [fullName]);
 
   const handlePickAvatar = async () => {
-    if (isPickingImage || isSaving) {
-      return;
-    }
+    if (isPickingImage || isSaving) return;
 
     setIsPickingImage(true);
     try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setToast({
-          visible: true,
-          message: "Permiso de galeria denegado",
-          type: "error",
-        });
+        setToast({ visible: true, message: "Permiso de galería denegado", type: "error" });
         return;
       }
 
@@ -181,214 +160,201 @@ export default function BarberProfileScreen() {
       phone: phone.trim(),
       avatarUri,
     };
-    await AsyncStorage.setItem(
-      LOCAL_BARBER_PROFILE_KEY,
-      JSON.stringify(payload),
-    );
+    await AsyncStorage.setItem(LOCAL_BARBER_PROFILE_KEY, JSON.stringify(payload));
   };
 
   const handleSaveProfile = async () => {
-    if (isSaving) {
-      return;
-    }
+    if (isSaving) return;
 
     if (fullName.trim().length < 2) {
-      setToast({
-        visible: true,
-        message: "El nombre debe tener al menos 2 caracteres",
-        type: "error",
-      });
+      setToast({ visible: true, message: "El nombre debe tener al menos 2 caracteres", type: "error" });
       return;
     }
 
     setIsSaving(true);
     try {
+      let persistedAvatarUri = avatarUri;
+
       if (isSupabaseConfigured) {
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData.user;
+
+        if (user && avatarUri && !avatarUri.startsWith("http")) {
+          persistedAvatarUri = await uploadUserAvatar(user, avatarUri);
+          setAvatarUri(persistedAvatarUri);
+        }
+
         const { error } = await supabase.auth.updateUser({
           data: {
             display_name: fullName.trim(),
             phone: phone.trim(),
-            avatar_url: avatarUri,
+            avatar_url: persistedAvatarUri,
           },
         });
 
         if (error) {
-          setToast({
-            visible: true,
-            message: error.message,
-            type: "error",
-          });
+          setToast({ visible: true, message: error.message, type: "error" });
           return;
+        }
+
+        if (user) {
+          await supabase
+            .from("profiles")
+            .update({
+              full_name: fullName.trim(),
+              avatar_url: persistedAvatarUri || null,
+            })
+            .eq("id", user.id);
         }
       }
 
       await saveLocalProfile();
-      setToast({
-        visible: true,
-        message: "Perfil actualizado",
-        type: "success",
-      });
+      setToast({ visible: true, message: "Perfil actualizado", type: "success" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const switchToRole = async (role: "cliente" | "dueno") => {
-    if (role === "dueno" && !hasOwnerRole) {
-      setToast({
-        visible: true,
-        message: "Tu cuenta no tiene perfil de dueño",
-        type: "error",
-      });
-      return;
-    }
+  const toggleNotifications = async () => {
+    const next = !notificationsEnabled;
 
-    await setStoredActiveRole(role);
-    if (role === "cliente") {
-      router.replace("/(tabs)");
-      return;
-    }
-
-    router.replace("/barber/dashboard-owner");
-  };
-
-  const options = useMemo(() => {
-    const base = [
-      "Notificaciones",
-      "Sincronizar calendario",
-      "Cambiar a vista Cliente",
-    ] as const;
-
-    const withOwner = hasOwnerRole
-      ? ([...base, "Cambiar a vista Dueno"] as const)
-      : base;
-
-    return [...withOwner, "Cerrar sesion"] as const;
-  }, [hasOwnerRole]);
-
-  const performSignOut = async () => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-
-      if (error) {
-        setToast({
-          visible: true,
-          message: "No se pudo cerrar en servidor. Cerrando localmente...",
-          type: "info",
-        });
-      }
-    }
-
-    await clearStoredActiveRole();
-    router.replace("/auth/login");
-  };
-
-  const handleOptionPress = async (item: (typeof options)[number]) => {
-    if (item === "Notificaciones") {
-      const current = await Notifications.getPermissionsAsync();
+    if (next) {
+      const currentPermission = await Notifications.getPermissionsAsync();
       let granted =
-        current.granted ||
-        current.ios?.status ===
-          Notifications.IosAuthorizationStatus.PROVISIONAL;
+        currentPermission.granted ||
+        currentPermission.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+
       if (!granted) {
-        const requested = await Notifications.requestPermissionsAsync();
+        const asked = await Notifications.requestPermissionsAsync();
         granted =
-          requested.granted ||
-          requested.ios?.status ===
-            Notifications.IosAuthorizationStatus.PROVISIONAL;
+          asked.granted ||
+          asked.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
       }
 
       if (!granted) {
-        setToast({
-          visible: true,
-          message: "Debes habilitar notificaciones para activarlas",
-          type: "error",
-        });
+        setToast({ visible: true, message: "Debes habilitar permisos para activar la campana.", type: "error" });
         return;
       }
 
-      setNotificationsEnabled(true);
-      await saveBarberPreferences({
-        notificationsEnabled: true,
-        calendarSyncEnabled,
-      });
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Notificaciones activadas",
-          body: "Recibiras recordatorios de turnos de hoy.",
-        },
-        trigger: null,
-      });
-
-      setToast({
-        visible: true,
-        message: "Notificaciones activadas",
-        type: "success",
-      });
-      return;
+      try {
+        const expoToken = (await Notifications.getExpoPushTokenAsync()).data;
+        await saveNotificationPushToken(expoToken);
+      } catch {
+        await saveNotificationPushToken(null);
+      }
+    } else {
+      await saveNotificationPushToken(null);
     }
 
-    if (item === "Sincronizar calendario") {
-      const current = await Calendar.getCalendarPermissionsAsync();
-      let granted = current.granted;
+    setNotificationsEnabled(next);
+    await saveBarberPreferences({
+      notificationsEnabled: next,
+      calendarSyncEnabled,
+    });
+    setToast({
+      visible: true,
+      message: next ? "Notificaciones activadas" : "Notificaciones desactivadas",
+      type: "info",
+    });
+  };
+
+  const toggleCalendarSync = async () => {
+    const next = !calendarSyncEnabled;
+
+    if (next) {
+      const permission = await Calendar.getCalendarPermissionsAsync();
+      let granted = permission.granted;
       if (!granted) {
         const requested = await Calendar.requestCalendarPermissionsAsync();
         granted = requested.granted;
       }
 
       if (!granted) {
-        setToast({
-          visible: true,
-          message: "Debes habilitar permisos de calendario",
-          type: "error",
-        });
+        setToast({ visible: true, message: "Permiso de calendario denegado", type: "error" });
+        return;
+      }
+    }
+
+    setCalendarSyncEnabled(next);
+    await saveBarberPreferences({
+      notificationsEnabled,
+      calendarSyncEnabled: next,
+    });
+    setToast({
+      visible: true,
+      message: next ? "Calendario vinculado" : "Calendario desvinculado",
+      type: "info",
+    });
+  };
+
+  const performSignOut = async () => {
+    if (isSaving) return;
+
+    setIsSaving(true);
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+      await clearStoredActiveRole();
+      router.replace("/auth/login");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Cerrar sesión", "¿Quieres cerrar sesión ahora?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Cerrar sesión", style: "destructive", onPress: () => void performSignOut() },
+    ]);
+  };
+
+  const performLeaveBarbershop = async () => {
+    if (isSaving) return;
+
+    if (!isSupabaseConfigured) {
+      setToast({ visible: true, message: "Esta acción requiere conexión con Supabase.", type: "error" });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+
+      if (!user?.id) {
+        setToast({ visible: true, message: "Sesión inválida. Inicia sesión nuevamente.", type: "error" });
         return;
       }
 
-      setCalendarSyncEnabled(true);
-      await saveBarberPreferences({
-        notificationsEnabled,
-        calendarSyncEnabled: true,
-      });
+      const { error } = await supabase
+        .from("barbers")
+        .update({ status: "inactive" })
+        .eq("user_id", user.id)
+        .eq("status", "active");
 
-      setToast({
-        visible: true,
-        message: "Calendario vinculado",
-        type: "success",
-      });
-      return;
+      if (error) {
+        setToast({ visible: true, message: error.message, type: "error" });
+        return;
+      }
+
+      await setStoredActiveRole("cliente");
+      setToast({ visible: true, message: "Te desvinculaste de la barbería.", type: "success" });
+      router.replace("/(tabs)/profile");
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    if (item === "Cambiar a vista Cliente") {
-      await switchToRole("cliente");
-      return;
-    }
-
-    if (item === "Cambiar a vista Dueno") {
-      await switchToRole("dueno");
-      return;
-    }
-
-    if (item === "Cerrar sesion") {
-      Alert.alert("Cerrar sesion", "Quieres cerrar sesion ahora?", [
+  const handleLeaveBarbershop = () => {
+    Alert.alert(
+      "Abandonar barbería",
+      "Vas a salir de tu barbería actual y volverás al perfil de cliente. ¿Deseas continuar?",
+      [
         { text: "Cancelar", style: "cancel" },
-        {
-          text: "Cerrar sesion",
-          style: "destructive",
-          onPress: () => {
-            void performSignOut();
-          },
-        },
-      ]);
-      return;
-    }
-
-    setToast({
-      visible: true,
-      message: "Esta opcion se activara en una proxima iteracion",
-      type: "info",
-    });
+        { text: "Abandonar", style: "destructive", onPress: () => void performLeaveBarbershop() },
+      ]
+    );
   };
 
   return (
@@ -401,140 +367,139 @@ export default function BarberProfileScreen() {
       />
 
       <View style={styles.topBar}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.replace("/barber/barber-my-agenda")}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#d4af37" />
+        <Pressable style={styles.backButton} onPress={() => router.replace("/barber/barber-my-agenda")}>
+          <Feather name="chevron-left" size={24} color="#d4af37" />
         </Pressable>
-        <Text style={styles.brand}>NAVAJA DORADA</Text>
-        <View style={styles.iconButton} />
+        <Text style={styles.brand}>MI CUENTA</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Mi Perfil</Text>
-
-        <View style={styles.avatarBlock}>
-          <View style={styles.avatarCircle}>
-            {isLoading ? (
-              <Skeleton style={styles.avatarSkeleton} borderRadius={55} />
-            ) : avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.avatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            )}
-          </View>
-          <Pressable
-            style={styles.editAvatar}
-            disabled={isSaving || isPickingImage}
-            onPress={() => {
-              void handlePickAvatar();
-            }}
-          >
-            <MaterialIcons name="edit" size={16} color="#3c2f00" />
-          </Pressable>
-          <Text style={styles.name}>{fullName || "Barbero"}</Text>
-          <Text style={styles.role}>Master Barber</Text>
-        </View>
-
-        {isLoading ? (
-          <>
-            <Skeleton style={styles.inputSkeleton} />
-            <Skeleton style={styles.inputSkeleton} />
-            <Skeleton style={styles.inputSkeleton} />
-          </>
-        ) : (
-          <>
-            <TextInput
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-              editable={!isLoading && !isSaving}
-              placeholder="Nombre"
-              placeholderTextColor="#777"
-            />
-            <TextInput
-              style={styles.inputDisabled}
-              value={email}
-              editable={false}
-            />
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              editable={!isLoading && !isSaving}
-              placeholder="Telefono"
-              placeholderTextColor="#777"
-              keyboardType="phone-pad"
-            />
-          </>
-        )}
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Mi Barberia</Text>
-          <Text style={styles.cardText}>Navaja Centro · Palermo</Text>
-          <Pressable
-            style={styles.leaveButton}
-            onPress={() => router.push("/barber/join-barbershop")}
-          >
-            <MaterialIcons name="logout" size={16} color="#ffb4ab" />
-            <Text style={styles.leaveText}>Dejar de trabajar aqui</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.list}>
-          {options.map((item) => (
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* HEADER: AVATAR & IDENTITY */}
+        <View style={styles.headerSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarWrapper}>
+              {isLoading ? (
+                <Skeleton style={styles.avatarSkeleton} borderRadius={60} />
+              ) : avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+              ) : (
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              )}
+            </View>
             <Pressable
-              key={item}
-              style={[
-                styles.option,
-                item === "Cerrar sesion" && styles.optionDanger,
-              ]}
-              onPress={() => {
-                void handleOptionPress(item);
-              }}
+              style={styles.editBadge}
+              disabled={isSaving || isPickingImage}
+              onPress={() => void handlePickAvatar()}
             >
-              <View style={styles.optionContent}>
-                <Text
-                  style={[
-                    styles.optionText,
-                    item === "Cerrar sesion" && styles.optionTextDanger,
-                  ]}
-                >
-                  {item}
-                </Text>
-                {item === "Notificaciones" ? (
-                  <Text style={styles.optionState}>
-                    {notificationsEnabled ? "Activadas" : "Desactivadas"}
-                  </Text>
-                ) : null}
-                {item === "Sincronizar calendario" ? (
-                  <Text style={styles.optionState}>
-                    {calendarSyncEnabled ? "Conectado" : "Desconectado"}
-                  </Text>
-                ) : null}
-              </View>
-              <MaterialIcons name="chevron-right" size={18} color="#99907c" />
+              <MaterialIcons name="camera-alt" size={16} color="#000" />
             </Pressable>
-          ))}
+          </View>
+          <Text style={styles.userName}>{fullName || "Barbero"}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusBadgeText}>PRO BARBER</Text>
+          </View>
+        </View>
+
+        {/* FORM SECTION */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Información Personal</Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.inputWrapper}>
+              <Feather name="user" size={18} color="#555" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Nombre completo"
+                placeholderTextColor="#444"
+              />
+            </View>
+            <View style={[styles.inputWrapper, styles.inputDisabled]}>
+              <Feather name="mail" size={18} color="#333" style={styles.inputIcon} />
+              <TextInput style={[styles.input, { color: "#555" }]} value={email} editable={false} />
+            </View>
+            <View style={styles.inputWrapper}>
+              <Feather name="phone" size={18} color="#555" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Teléfono"
+                placeholderTextColor="#444"
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* BARBERSHOP CARD */}
+        <View style={styles.workCard}>
+          <View style={styles.workInfo}>
+            <View style={styles.workIcon}>
+              <MaterialIcons name="content-cut" size={20} color="#d4af37" />
+            </View>
+            <View>
+              <Text style={styles.workTitle}>Navaja Centro</Text>
+              <Text style={styles.workSubtitle}>Palermo, Buenos Aires</Text>
+            </View>
+          </View>
+          <Pressable style={styles.leaveLink} onPress={handleLeaveBarbershop}>
+            <Text style={styles.leaveLinkText}>Abandonar barbería</Text>
+          </Pressable>
+        </View>
+
+        {/* OPTIONS SECTION */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Preferencias y Roles</Text>
+          <View style={styles.optionsList}>
+            <OptionItem
+              icon="bell"
+              label="Notificaciones"
+              value={notificationsEnabled ? "Activadas" : "Desactivadas"}
+              onPress={() => void toggleNotifications()}
+            />
+            <OptionItem
+              icon="calendar"
+              label="Sincronizar calendario"
+              value={calendarSyncEnabled ? "Conectado" : "Vincular"}
+              onPress={() => void toggleCalendarSync()}
+            />
+            <OptionItem
+              icon="users"
+              label="Vista Cliente"
+              onPress={() => {
+                void setStoredActiveRole("cliente");
+                router.replace("/(tabs)");
+              }}
+            />
+            {hasOwnerRole && (
+              <OptionItem
+                icon="shield"
+                label="Panel de Dueño"
+                onPress={() => {
+                  void setStoredActiveRole("dueno");
+                  router.replace("/barber/dashboard-owner");
+                }}
+                color="#d4af37"
+              />
+            )}
+            <OptionItem
+              icon="log-out"
+              label="Cerrar sesión"
+              onPress={handleSignOut}
+              isLast
+              color="#ff4466"
+            />
+          </View>
         </View>
 
         <Pressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          disabled={isSaving || isLoading}
-          onPress={() => {
-            void handleSaveProfile();
-          }}
+          onPress={() => void handleSaveProfile()}
         >
           <Text style={styles.saveButtonText}>
-            {isSaving ? "Guardando..." : "Guardar cambios"}
+            {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -544,138 +509,161 @@ export default function BarberProfileScreen() {
   );
 }
 
+function OptionItem({ icon, label, value, onPress, isLast, color = "#eee" }: any) {
+  return (
+    <Pressable onPress={onPress} style={[styles.optionItem, isLast && { borderBottomWidth: 0 }]}>
+      <View style={styles.optionRow}>
+        <Feather name={icon} size={18} color={color} style={{ marginRight: 12 }} />
+        <Text style={[styles.optionLabel, { color }]}>{label}</Text>
+      </View>
+      <View style={styles.optionRow}>
+        {value && <Text style={styles.optionValue}>{value}</Text>}
+        <Feather name="chevron-right" size={16} color="#333" />
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#131313" },
+  screen: { flex: 1, backgroundColor: "#080808" },
   topBar: {
-    height: 70,
+    height: 100,
+    paddingTop: 45,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(19,19,19,0.92)",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
   },
-  brand: {
-    color: "#d4af37",
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 110,
-    gap: 12,
-  },
-  title: { color: "#e5e2e1", fontSize: 34, fontWeight: "800" },
-  avatarBlock: { alignItems: "center", marginTop: 6, marginBottom: 6 },
-  avatarCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "#2a2a2a",
+  brand: { color: "#d4af37", fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  content: { paddingHorizontal: 20, paddingBottom: 140 },
+  headerSection: { alignItems: "center", marginVertical: 20 },
+  avatarContainer: { position: "relative", marginBottom: 15 },
+  avatarWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#111",
     borderWidth: 2,
-    borderColor: "rgba(212,175,55,0.25)",
+    borderColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
-  },
-  avatarInitials: { color: "#f2ca50", fontSize: 36, fontWeight: "800" },
-  avatarImage: { width: "100%", height: "100%" },
-  avatarSkeleton: {
-    width: "100%",
-    height: "100%",
-  },
-  editAvatar: {
-    marginTop: -18,
-    marginLeft: 68,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#d4af37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  name: { marginTop: 10, color: "#e5e2e1", fontSize: 22, fontWeight: "800" },
-  role: { color: "#d0c5af", fontSize: 13, marginTop: 2 },
-  input: {
-    minHeight: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#4d4635",
-    color: "#e5e2e1",
-    fontSize: 16,
-    paddingHorizontal: 0,
-  },
-  inputDisabled: {
-    minHeight: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#3a3529",
-    color: "#a69d88",
-    fontSize: 16,
-    paddingHorizontal: 0,
-  },
-  inputSkeleton: {
-    minHeight: 50,
-    borderRadius: 8,
-  },
-  card: {
-    marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
-    padding: 14,
-  },
-  cardTitle: { color: "#e5e2e1", fontSize: 17, fontWeight: "700" },
-  cardText: { color: "#d0c5af", fontSize: 12, marginTop: 3 },
-  leaveButton: {
-    marginTop: 12,
-    minHeight: 38,
-    borderRadius: 9,
-    backgroundColor: "rgba(147,0,10,0.25)",
-    borderWidth: 1,
-    borderColor: "rgba(255,180,171,0.25)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-  },
-  leaveText: { color: "#ffb4ab", fontSize: 12, fontWeight: "700" },
-  list: {
-    marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: "#1c1b1b",
-    borderWidth: 1,
-    borderColor: "rgba(77,70,53,0.25)",
     overflow: "hidden",
   },
-  option: {
-    minHeight: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(77,70,53,0.2)",
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  optionContent: { gap: 2 },
-  optionText: { color: "#e5e2e1", fontSize: 14 },
-  optionDanger: { borderColor: "rgba(255,180,171,0.25)" },
-  optionTextDanger: { color: "#ffb4ab", fontWeight: "700" },
-  optionState: { color: "#99907c", fontSize: 11 },
-  saveButton: {
-    minHeight: 48,
-    borderRadius: 10,
+  avatarImage: { width: "100%", height: "100%" },
+  avatarInitials: { color: "#d4af37", fontSize: 40, fontWeight: "800" },
+  avatarSkeleton: { width: "100%", height: "100%" },
+  editBadge: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#d4af37",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    borderWidth: 3,
+    borderColor: "#080808",
   },
-  saveButtonDisabled: { opacity: 0.7 },
-  saveButtonText: { color: "#241a00", fontSize: 14, fontWeight: "800" },
+  userName: { color: "#fff", fontSize: 24, fontWeight: "800" },
+  statusBadge: {
+    backgroundColor: "#1a1a1a",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  statusBadgeText: { color: "#d4af37", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  section: { marginBottom: 25 },
+  sectionLabel: {
+    color: "#555",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 12,
+    letterSpacing: 1,
+  },
+  inputGroup: {
+    backgroundColor: "#111",
+    borderRadius: 20,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 55,
+    paddingHorizontal: 15,
+  },
+  inputDisabled: { opacity: 0.5 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, color: "#fff", fontSize: 15, fontWeight: "600" },
+  workCard: {
+    backgroundColor: "#111",
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  workInfo: { flexDirection: "row", alignItems: "center" },
+  workIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#1a1608",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  workTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  workSubtitle: { color: "#555", fontSize: 12 },
+  leaveLink: { paddingVertical: 6, paddingHorizontal: 2 },
+  leaveLinkText: { color: "#ff4466", fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+  optionsList: {
+    backgroundColor: "#111",
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  optionItem: {
+    height: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1a1a1a",
+  },
+  optionRow: { flexDirection: "row", alignItems: "center" },
+  optionLabel: { fontSize: 14, fontWeight: "600" },
+  optionValue: { color: "#555", fontSize: 12, marginRight: 8 },
+  saveButton: {
+    backgroundColor: "#d4af37",
+    height: 60,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    shadowColor: "#d4af37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  saveButtonDisabled: { opacity: 0.5 },
+  saveButtonText: { color: "#000", fontSize: 14, fontWeight: "900" },
 });

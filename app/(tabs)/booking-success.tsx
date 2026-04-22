@@ -1,9 +1,12 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    Dimensions,
     Pressable,
+    SafeAreaView,
     ScrollView,
     Share,
     StyleSheet,
@@ -11,7 +14,7 @@ import {
     View,
 } from "react-native";
 
-import { getBarberById, getServiceById } from "@/constants/booking-flow";
+const { width } = Dimensions.get("window");
 
 const pickFirst = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
@@ -23,6 +26,9 @@ export default function BookingSuccessScreen() {
     shopName?: string;
     serviceId?: string;
     barberId?: string;
+    serviceName?: string;
+    servicePrice?: string;
+    barberName?: string;
     dateLabel?: string;
     time?: string;
   }>();
@@ -30,30 +36,28 @@ export default function BookingSuccessScreen() {
   const appointmentId = pickFirst(params.appointmentId);
   const isReschedule = pickFirst(params.isReschedule) === "1";
   const shopName = pickFirst(params.shopName) ?? "Atelier Palermo";
-  const serviceId = pickFirst(params.serviceId) ?? "service-haircut";
-  const barberId = pickFirst(params.barberId) ?? "barber-any";
+  const serviceName = pickFirst(params.serviceName) ?? "Servicio";
+  const servicePrice = pickFirst(params.servicePrice) ?? "$0";
+  const barberName = pickFirst(params.barberName) ?? "Cualquier profesional";
   const dateLabel = pickFirst(params.dateLabel) ?? "Martes 16 de Octubre";
   const time = pickFirst(params.time) ?? "16:30";
 
-  const service = getServiceById(serviceId);
-  const barber = getBarberById(barberId);
-
-  const [showNotificationsPrompt, setShowNotificationsPrompt] = useState(true);
+  const [showNotificationsPrompt, setShowNotificationsPrompt] = useState(false);
   const [calendarAdded, setCalendarAdded] = useState(false);
 
-  const handleShare = async () => {
-    await Share.share({
-      message: `Reserva confirmada en ${shopName} para ${dateLabel} a las ${time}.`,
-    });
-  };
-
   useEffect(() => {
-    const timeout = setTimeout(() => setShowNotificationsPrompt(true), 200);
+    const timeout = setTimeout(() => setShowNotificationsPrompt(true), 800);
     return () => clearTimeout(timeout);
   }, []);
 
+  const handleShare = async () => {
+    await Share.share({
+      message: `¡Listo! Turno confirmado en ${shopName} para el ${dateLabel} a las ${time}hs.`,
+    });
+  };
+
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -61,400 +65,356 @@ export default function BookingSuccessScreen() {
       >
         <Text style={styles.brand}>NAVAJA DORADA</Text>
 
-        <View style={styles.successIconWrap}>
+        <View style={styles.successHeader}>
           <View style={styles.successCircle}>
-            <MaterialIcons name="check" size={48} color="#3c2f00" />
+            <MaterialIcons name="check" size={44} color="#000" />
           </View>
-        </View>
-
-        <Text style={styles.title}>Turno confirmado</Text>
-        <Text style={styles.subtitle}>
-          Tu experiencia en el atelier esta reservada.
-        </Text>
-
-        <View style={styles.detailsCard}>
-          <View style={styles.accent} />
-
-          <View style={styles.detailRow}>
-            <MaterialIcons name="location-on" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.detailLabel}>Atelier</Text>
-              <Text style={styles.detailValue}>{shopName}</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailRow}>
-            <MaterialIcons name="content-cut" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.detailLabel}>Servicio</Text>
-              <Text style={styles.detailValue}>{service.name}</Text>
-              <Text style={styles.detailMuted}>con {barber.name}</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailRow}>
-            <MaterialIcons name="schedule" size={18} color="#f2ca50" />
-            <View>
-              <Text style={styles.detailLabel}>Fecha y Hora</Text>
-              <Text style={styles.detailValue}>{dateLabel}</Text>
-              <Text style={styles.detailTime}>{time} h</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.qrCard}>
-          <Text style={styles.qrLabel}>Pase de Acceso</Text>
-          <View style={styles.qrBox}>
-            <Image
-              source={{
-                uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuDtbD5fuU3eQdJ2etKS4PhyudpbfYolKIYCn-pqoYVdm_cZGc8xa-70K1_Dvi7nCTXGFowQPDmCMsSiSb8wLS8mJodefy75bVlnZpbmUHSVJQ7_SQOaJyoBOR0SBTzasu-0Z8XgBFqC8fg5BjDG1Qsvvyr6hESpFv9Oul-fLsE6vSnl6dsV1EauvN6RPCGP0RoMg__d9f2OkmWIQgIlTKojzLz99litp2VU4Z25MMrMFOs3hLkDqVaQ0eUq-a6-filQyX54O9QSka-x",
-              }}
-              style={styles.qrImage}
-              contentFit="cover"
-            />
-          </View>
-          <Text style={styles.qrText}>
-            Presenta este codigo al llegar al atelier.
+          <Text style={styles.title}>¡Reserva Lista!</Text>
+          <Text style={styles.subtitle}>
+            Tu lugar en el atelier está confirmado.
           </Text>
+        </View>
+
+        {/* TICKET DE RESERVA */}
+        <View style={styles.ticketContainer}>
+          <LinearGradient
+            colors={["#1C1C1C", "#141414"]}
+            style={styles.ticketCard}
+          >
+            <View style={styles.ticketHeader}>
+              <View>
+                <Text style={styles.ticketLabel}>CLIENTE</Text>
+                <Text style={styles.ticketValue}>Usuario Premium</Text>
+              </View>
+              <View style={styles.priceTag}>
+                <Text style={styles.priceText}>{servicePrice}</Text>
+              </View>
+            </View>
+
+            <View style={styles.ticketDivider}>
+              <View style={styles.dotLeft} />
+              <View style={styles.dashLine} />
+              <View style={styles.dotRight} />
+            </View>
+
+            <View style={styles.ticketBody}>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <Text style={styles.ticketLabel}>FECHA</Text>
+                  <Text style={styles.ticketValue}>{dateLabel}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.ticketLabel}>HORA</Text>
+                  <Text style={[styles.ticketValue, { color: "#D4AF37" }]}>
+                    {time} HS
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.infoItem}>
+                <Text style={styles.ticketLabel}>DETALLES</Text>
+                <Text style={styles.ticketValue}>{serviceName}</Text>
+                <Text style={styles.barberName}>con {barberName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.qrSection}>
+              <View style={styles.qrWrapper}>
+                <Image
+                  source={{
+                    uri:
+                      "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" +
+                      appointmentId,
+                  }}
+                  style={styles.qrImage}
+                />
+              </View>
+              <Text style={styles.qrHint}>PRESENTAR AL LLEGAR</Text>
+            </View>
+          </LinearGradient>
         </View>
       </ScrollView>
 
+      {/* FOOTER ACTIONS */}
       <View style={styles.footer}>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => setCalendarAdded(true)}
-        >
-          <MaterialIcons
-            name={calendarAdded ? "check-circle" : "event"}
-            size={18}
-            color="#3c2f00"
-          />
-          <Text style={styles.primaryButtonText}>
-            {calendarAdded ? "Agregado al Calendario" : "Agregar a Calendario"}
-          </Text>
-        </Pressable>
+        <View style={styles.mainActions}>
+          <Pressable
+            style={[styles.btnPrimary, calendarAdded && styles.btnSuccess]}
+            onPress={() => setCalendarAdded(true)}
+          >
+            <MaterialIcons
+              name={calendarAdded ? "event-available" : "event"}
+              size={20}
+              color="#000"
+            />
+            <Text style={styles.btnPrimaryText}>
+              {calendarAdded ? "Agregado" : "Agendar cita"}
+            </Text>
+          </Pressable>
 
-        {calendarAdded ? (
-          <Text style={styles.calendarAddedText}>
-            Listo. El turno quedo guardado en tu calendario (modo demo).
-          </Text>
-        ) : null}
-
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => void handleShare()}
-        >
-          <MaterialIcons name="share" size={18} color="#f2ca50" />
-          <Text style={styles.secondaryButtonText}>Compartir</Text>
-        </Pressable>
+          <Pressable style={styles.btnSecondary} onPress={handleShare}>
+            <MaterialIcons name="share" size={20} color="#D4AF37" />
+          </Pressable>
+        </View>
 
         <Pressable
-          style={styles.linkButton}
-          onPress={() =>
-            router.replace({
-              pathname: "/(tabs)/bookings",
-              params:
-                isReschedule && appointmentId
-                  ? {
-                      updatedAppointmentId: appointmentId,
-                      updatedDate: dateLabel,
-                      updatedTime: time,
-                    }
-                  : undefined,
-            })
-          }
+          style={styles.btnLink}
+          onPress={() => router.replace("/(tabs)/bookings")}
         >
-          <Text style={styles.linkText}>Ir a Mis Turnos</Text>
+          <Text style={styles.btnLinkText}>Ver mis turnos</Text>
         </Pressable>
       </View>
 
-      {showNotificationsPrompt ? (
-        <View style={styles.overlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconWrap}>
+      {/* MODAL DE NOTIFICACIONES CORREGIDO */}
+      {showNotificationsPrompt && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconBox}>
               <MaterialIcons
                 name="notifications-active"
-                size={28}
-                color="#f2ca50"
+                size={30}
+                color="#D4AF37"
               />
             </View>
-            <Text style={styles.modalTitle}>Activar notificaciones?</Text>
-            <Text style={styles.modalBody}>
-              Te avisaremos 24 horas antes de tu cita y sobre beneficios
-              exclusivos.
+            <Text style={styles.modalTitle}>¿Activamos avisos?</Text>
+            <Text style={styles.modalText}>
+              Te recordaremos tu cita 24hs antes para que no pierdas tu lugar.
             </Text>
 
-            <Pressable
-              style={styles.modalPrimaryButton}
-              onPress={() => setShowNotificationsPrompt(false)}
-            >
-              <Text style={styles.modalPrimaryText}>Si, avisarme</Text>
-            </Pressable>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalBtnConfirm}
+                onPress={() => setShowNotificationsPrompt(false)}
+              >
+                <Text style={styles.modalBtnConfirmText}>Sí, avisarme</Text>
+              </Pressable>
 
-            <Pressable
-              style={styles.modalSecondaryButton}
-              onPress={() => setShowNotificationsPrompt(false)}
-            >
-              <Text style={styles.modalSecondaryText}>Despues</Text>
-            </Pressable>
+              <Pressable
+                style={styles.modalBtnCancel}
+                onPress={() => setShowNotificationsPrompt(false)}
+              >
+                <Text style={styles.modalBtnCancelText}>Después</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      ) : null}
-    </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#131313",
-  },
-  scroll: {
-    flex: 1,
-  },
+  screen: { flex: 1, backgroundColor: "#0A0A0A" },
+  scroll: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 220,
+    paddingHorizontal: 25,
+    paddingTop: 40,
+    paddingBottom: 180,
     alignItems: "center",
-    gap: 16,
   },
+
   brand: {
-    color: "#d4af37",
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 3,
+    color: "#D4AF37",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 5,
+    marginBottom: 25,
+    opacity: 0.8,
   },
-  successIconWrap: {
-    marginTop: 8,
-    marginBottom: 2,
-  },
+
+  successHeader: { alignItems: "center", marginBottom: 25 },
   successCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#d4af37",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#D4AF37",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#d4af37",
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
+    marginBottom: 15,
   },
-  title: {
-    color: "#e5e2e1",
-    fontSize: 32,
-    lineHeight: 36,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#d0c5af",
-    fontSize: 15,
-    textAlign: "center",
-    maxWidth: 310,
-  },
-  detailsCard: {
-    width: "100%",
-    borderRadius: 14,
-    backgroundColor: "#1c1b1b",
+  title: { color: "#FFF", fontSize: 26, fontWeight: "900" },
+  subtitle: { color: "#777", fontSize: 14, marginTop: 5 },
+
+  ticketContainer: { width: "100%" },
+  ticketCard: {
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    padding: 14,
-    gap: 14,
+    borderColor: "#222",
     overflow: "hidden",
   },
-  accent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "#d4af37",
-  },
-  detailRow: {
+  ticketHeader: {
+    padding: 20,
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  detailLabel: {
-    color: "#99907c",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  detailValue: {
-    color: "#e5e2e1",
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  detailMuted: {
-    marginTop: 2,
-    color: "#d0c5af",
-    fontSize: 13,
-  },
-  detailTime: {
-    marginTop: 2,
-    color: "#f2ca50",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  qrCard: {
-    width: "100%",
-    borderRadius: 14,
-    backgroundColor: "#2a2a2a",
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.24)",
-    padding: 16,
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
   },
-  qrLabel: {
-    color: "#d0c5af",
-    fontSize: 11,
-    textTransform: "uppercase",
+  ticketLabel: {
+    color: "#555",
+    fontSize: 10,
+    fontWeight: "800",
     letterSpacing: 1,
+    marginBottom: 4,
   },
-  qrBox: {
-    width: 130,
-    height: 130,
+  ticketValue: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  priceTag: {
+    backgroundColor: "rgba(212, 175, 55, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: "#fff",
+  },
+  priceText: { color: "#D4AF37", fontWeight: "900", fontSize: 16 },
+
+  ticketDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 30,
+    marginVertical: 5,
+  },
+  dashLine: {
+    flex: 1,
+    height: 1,
+    borderStyle: "dashed",
+    borderColor: "#333",
+    borderWidth: 1,
+  },
+  dotLeft: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#0A0A0A",
+    marginLeft: -12,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  dotRight: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#0A0A0A",
+    marginRight: -12,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+
+  ticketBody: { padding: 20, paddingTop: 0, gap: 15 },
+  infoGrid: { flexDirection: "row", justifyContent: "space-between" },
+  infoItem: { flex: 1 },
+  barberName: { color: "#666", fontSize: 13 },
+
+  qrSection: {
+    alignItems: "center",
+    paddingVertical: 20,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  qrWrapper: {
     padding: 8,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    marginBottom: 10,
   },
-  qrImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 6,
+  qrImage: { width: 110, height: 110 },
+  qrHint: {
+    color: "#D4AF37",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 2,
   },
-  qrText: {
-    color: "#d0c5af",
-    fontSize: 13,
-    textAlign: "center",
-  },
+
   footer: {
     position: "absolute",
-    left: 0,
-    right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 20,
-    backgroundColor: "rgba(14, 14, 14, 0.96)",
+    width: "100%",
+    padding: 20,
+    paddingBottom: 35,
+    backgroundColor: "rgba(10,10,10,0.95)",
     gap: 10,
   },
-  primaryButton: {
-    minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: "#d4af37",
+  mainActions: { flexDirection: "row", gap: 10 },
+  btnPrimary: {
+    flex: 1,
+    height: 56,
+    backgroundColor: "#D4AF37",
+    borderRadius: 16,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
     gap: 8,
   },
-  primaryButtonText: {
-    color: "#3c2f00",
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  calendarAddedText: {
-    color: "#f2ca50",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  secondaryButton: {
-    minHeight: 50,
-    borderRadius: 12,
-    backgroundColor: "#353535",
+  btnSuccess: { backgroundColor: "#4CAF50" },
+  btnPrimaryText: { color: "#000", fontSize: 16, fontWeight: "900" },
+  btnSecondary: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "#1A1A1A",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
+    borderColor: "#333",
   },
-  secondaryButtonText: {
-    color: "#f2ca50",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  linkButton: {
-    minHeight: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  linkText: {
-    color: "#d0c5af",
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  overlay: {
+  btnLink: { height: 40, alignItems: "center", justifyContent: "center" },
+  btnLinkText: { color: "#666", fontSize: 14, fontWeight: "700" },
+
+  /* ESTILOS DEL MODAL CORREGIDOS */
+  modalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    alignItems: "center",
+    padding: 25,
   },
-  modalCard: {
+  modalContent: {
     width: "100%",
-    maxWidth: 360,
-    borderRadius: 18,
-    backgroundColor: "#2a2a2a",
-    padding: 20,
+    maxWidth: 340,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 28,
+    padding: 25,
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.22)",
+    borderColor: "#333",
   },
-  modalIconWrap: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#1c1b1b",
+  modalIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 12,
+    marginBottom: 20,
   },
   modalTitle: {
-    color: "#e5e2e1",
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "800",
-    textAlign: "center",
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "900",
+    marginBottom: 10,
   },
-  modalBody: {
-    marginTop: 10,
-    color: "#d0c5af",
-    fontSize: 14,
+  modalText: {
+    color: "#888",
     textAlign: "center",
+    fontSize: 14,
     lineHeight: 20,
+    marginBottom: 25,
   },
-  modalPrimaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: "#d4af37",
+
+  modalActions: {
+    width: "100%",
+    gap: 8,
+  },
+  modalBtnConfirm: {
+    width: "100%",
+    height: 54,
+    backgroundColor: "#D4AF37",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 18,
   },
-  modalPrimaryText: {
-    color: "#3c2f00",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  modalSecondaryButton: {
-    minHeight: 42,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(77, 70, 53, 0.3)",
+  modalBtnConfirmText: { color: "#000", fontSize: 16, fontWeight: "900" },
+  modalBtnCancel: {
+    width: "100%",
+    height: 50,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
   },
-  modalSecondaryText: {
-    color: "#f2ca50",
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  modalBtnCancelText: { color: "#666", fontSize: 15, fontWeight: "700" },
 });
