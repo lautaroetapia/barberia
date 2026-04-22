@@ -2,14 +2,14 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 import { BarberRoleNav } from "@/components/barber-role-nav";
@@ -32,23 +32,51 @@ export default function OwnerPoliciesScreen() {
   useEffect(() => {
     let isMounted = true;
     const loadPolicies = async () => {
-      const policies = await getOwnerPolicies();
-      if (!isMounted) return;
-      setFreeCancellationHours(policies.freeCancellationHours);
-      setNoShowPenalty(policies.noShowPenalty);
-      setAutoConfirmAppointments(policies.autoConfirmAppointments);
-      setAllowNightBookings(policies.allowNightBookings);
-      setIsLoading(false);
+      try {
+        const policies = await getOwnerPolicies();
+        if (!isMounted) return;
+        setFreeCancellationHours(policies.freeCancellationHours);
+        setNoShowPenalty(policies.noShowPenalty);
+        setAutoConfirmAppointments(policies.autoConfirmAppointments);
+        setAllowNightBookings(policies.allowNightBookings);
+      } catch (error) {
+        if (!isMounted) return;
+        setToast({
+          visible: true,
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "No se pudieron cargar las políticas.",
+        });
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     };
     void loadPolicies();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSave = async () => {
-    if (!Number(freeCancellationHours) && freeCancellationHours !== "0") {
-      setToast({ visible: true, type: "error", message: "Ingresa un número de horas válido." });
+    if (!Number.isFinite(Number(freeCancellationHours))) {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "Ingresa un número de horas válido.",
+      });
       return;
     }
+    if (!Number.isFinite(Number(noShowPenalty))) {
+      setToast({
+        visible: true,
+        type: "error",
+        message: "Ingresa un porcentaje válido para No-Show.",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       await saveOwnerPolicies({
@@ -57,7 +85,20 @@ export default function OwnerPoliciesScreen() {
         autoConfirmAppointments,
         allowNightBookings,
       });
-      setToast({ visible: true, type: "success", message: "Políticas actualizadas correctamente" });
+      setToast({
+        visible: true,
+        type: "success",
+        message: "Políticas actualizadas correctamente",
+      });
+    } catch (error) {
+      setToast({
+        visible: true,
+        type: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se pudieron guardar las políticas.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -80,13 +121,18 @@ export default function OwnerPoliciesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
           <ActivityIndicator color="#d4af37" style={{ marginTop: 20 }} />
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Cancelaciones y Penalizaciones</Text>
-            
+            <Text style={styles.sectionTitle}>
+              Cancelaciones y Penalizaciones
+            </Text>
+
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Feather name="clock" size={18} color="#d4af37" />
@@ -103,7 +149,10 @@ export default function OwnerPoliciesScreen() {
                 />
                 <Text style={styles.inputSuffix}>Horas antes</Text>
               </View>
-              <Text style={styles.labelHint}>Tiempo límite para cancelar sin que se apliquen cargos al cliente.</Text>
+              <Text style={styles.labelHint}>
+                Tiempo límite para cancelar sin que se apliquen cargos al
+                cliente.
+              </Text>
             </View>
 
             <View style={styles.card}>
@@ -122,15 +171,21 @@ export default function OwnerPoliciesScreen() {
                 />
                 <Text style={styles.inputSuffix}>% del servicio</Text>
               </View>
-              <Text style={styles.labelHint}>Porcentaje sugerido a cobrar si el cliente no se presenta.</Text>
+              <Text style={styles.labelHint}>
+                Porcentaje sugerido a cobrar si el cliente no se presenta.
+              </Text>
             </View>
 
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Automatización y Horarios</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+              Automatización y Horarios
+            </Text>
 
             <View style={styles.cardRow}>
               <View style={styles.cardRowText}>
                 <Text style={styles.labelTitle}>Auto-confirmación</Text>
-                <Text style={styles.labelHint}>Acepta turnos sin intervención manual.</Text>
+                <Text style={styles.labelHint}>
+                  Acepta turnos sin intervención manual.
+                </Text>
               </View>
               <Switch
                 value={autoConfirmAppointments}
@@ -143,7 +198,9 @@ export default function OwnerPoliciesScreen() {
             <View style={styles.cardRow}>
               <View style={styles.cardRowText}>
                 <Text style={styles.labelTitle}>Reservas Nocturnas</Text>
-                <Text style={styles.labelHint}>Permite turnos fuera del horario estándar.</Text>
+                <Text style={styles.labelHint}>
+                  Permite turnos fuera del horario estándar.
+                </Text>
               </View>
               <Switch
                 value={allowNightBookings}
@@ -217,7 +274,12 @@ const styles = StyleSheet.create({
     borderColor: "#222",
     marginBottom: 12,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
   label: { color: "#eee", fontSize: 14, fontWeight: "700" },
   inputWrapper: {
     flexDirection: "row",
@@ -238,7 +300,7 @@ const styles = StyleSheet.create({
   },
   inputSuffix: { color: "#666", fontSize: 13, fontWeight: "600" },
   labelHint: { color: "#777", fontSize: 12, lineHeight: 18 },
-  
+
   cardRow: {
     borderRadius: 20,
     backgroundColor: "#151515",

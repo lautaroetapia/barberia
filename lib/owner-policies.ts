@@ -15,6 +15,12 @@ export type OwnerPolicies = {
   allowNightBookings: boolean;
 };
 
+const DEFAULT_OWNER_POLICIES: OwnerPolicies = {
+  freeCancellationHours: "12",
+  noShowPenalty: "20",
+  autoConfirmAppointments: true,
+  allowNightBookings: true,
+};
 
 type DbOwnerPolicies = {
   free_cancellation_hours: number;
@@ -34,7 +40,7 @@ const parsePolicies = (raw: string | null): OwnerPolicies | null => {
   }
 };
 
-export const getOwnerPolicies = async () => {
+export const getOwnerPolicies = async (): Promise<OwnerPolicies> => {
   const scope = await resolveStorageScope();
   const scopedKey = buildScopedStorageKey(OWNER_POLICIES_KEY, scope);
 
@@ -70,8 +76,8 @@ export const getOwnerPolicies = async () => {
   if (parsed) {
     return parsed;
   }
-  // Si no hay datos en Supabase ni en cache, retorna vacío
-  return null;
+  // Si no hay datos en Supabase ni en cache, retorna defaults seguros.
+  return DEFAULT_OWNER_POLICIES;
 };
 
 export const saveOwnerPolicies = async (policies: OwnerPolicies) => {

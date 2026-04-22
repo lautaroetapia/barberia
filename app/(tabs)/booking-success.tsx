@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    Alert,
     Dimensions,
     Pressable,
     SafeAreaView,
@@ -51,9 +52,28 @@ export default function BookingSuccessScreen() {
   }, []);
 
   const handleShare = async () => {
-    await Share.share({
-      message: `¡Listo! Turno confirmado en ${shopName} para el ${dateLabel} a las ${time}hs.`,
-    });
+    try {
+      const shareText = [
+        "Reserva confirmada en Navaja Dorada",
+        `Barbería: ${shopName}`,
+        `Servicio: ${serviceName}`,
+        `Barbero: ${barberName}`,
+        `Fecha: ${dateLabel}`,
+        `Hora: ${time} hs`,
+      ].join("\n");
+
+      await Share.share({
+        title: "Reserva confirmada",
+        message: shareText,
+      });
+    } catch (error) {
+      Alert.alert(
+        "No se pudo compartir",
+        error instanceof Error
+          ? error.message
+          : "Inténtalo nuevamente en unos segundos.",
+      );
+    }
   };
 
   return (

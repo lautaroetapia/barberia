@@ -5,6 +5,7 @@ import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+    Alert,
     Modal,
     Platform,
     Pressable,
@@ -16,6 +17,12 @@ import {
 } from "react-native";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    cancelClientAppointment,
+    getClientActiveAppointments,
+    getClientAppointmentHistory,
+    type ClientAppointmentCard,
+} from "@/lib/booking-catalog";
 import { getFavoriteBarbers, toggleFavoriteBarber } from "@/lib/favorites";
 import { supabase } from "@/lib/supabase";
 
@@ -34,14 +41,48 @@ const getDisplayName = (user: User | null) => {
   return "Usuario";
 };
 
+type HomeNotification = {
+  id: string;
+  title: string;
+  body: string;
+};
+
+const buildNotificationsFromAppointments = (
+  nextAppointment: ClientAppointmentCard | null,
+  history: ClientAppointmentCard[],
+) => {
+  const items: HomeNotification[] = [];
+
+  if (nextAppointment) {
+    items.push({
+      id: `next-${nextAppointment.id}`,
+      title: "Proximo turno confirmado",
+      body: `${nextAppointment.service} • ${nextAppointment.date}, ${nextAppointment.time}`,
+    });
+  }
+
+  history.slice(0, 3).forEach((appointment) => {
+    items.push({
+      id: `history-${appointment.id}`,
+      title: `Turno ${appointment.status.toLowerCase()}`,
+      body: `${appointment.service} • ${appointment.date}, ${appointment.time}`,
+    });
+  });
+
+  return items;
+};
+
 export default function HomeScreen() {
   const [displayName, setDisplayName] = useState("Cliente");
   const [isHomeLoading, setIsHomeLoading] = useState(true);
-  const [showNextTurnCard, setShowNextTurnCard] = useState(true);
+  const [isNextTurnLoading, setIsNextTurnLoading] = useState(true);
+  const [nextTurn, setNextTurn] = useState<ClientAppointmentCard | null>(null);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [isCancellingTurn, setIsCancellingTurn] = useState(false);
   const [favoriteBarberIds, setFavoriteBarberIds] = useState<string[]>([]);
   const [notificationsModalVisible, setNotificationsModalVisible] =
     useState(false);
+  const [notifications, setNotifications] = useState<HomeNotification[]>([]);
 
   const [featuredBarbers, setFeaturedBarbers] = useState([]);
   const [isBarbersLoading, setIsBarbersLoading] = useState(true);
@@ -63,6 +104,64 @@ export default function HomeScreen() {
       isMounted = false;
     };
   }, []);
+
+  const loadAppointmentsData = useCallback(async () => {
+    setIsNextTurnLoading(true);
+
+    try {
+      const [activeAppointments, historyAppointments] = await Promise.all([
+        getClientActiveAppointments(),
+        getClientAppointmentHistory(),
+      ]);
+
+      const nextAppointment = activeAppointments[0] ?? null;
+      setNextTurn(nextAppointment);
+      setNotifications(
+        buildNotificationsFromAppointments(
+          nextAppointment,
+          historyAppointments,
+        ),
+      );
+    } finally {
+      setIsNextTurnLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadAppointmentsData();
+    }, [loadAppointmentsData]),
+  );
+
+  const handleCancelAppointment = useCallback(async () => {
+    if (!nextTurn || isCancellingTurn) {
+      return;
+    }
+
+    setIsCancellingTurn(true);
+
+    try {
+      const result = await cancelClientAppointment(nextTurn.id);
+
+      setCancelModalVisible(false);
+      await loadAppointmentsData();
+      Alert.alert(
+        "Turno cancelado",
+        result.penaltyApplies
+          ? `La cancelación quedó registrada. Como faltan menos de ${result.freeCancellationHours} horas, puede aplicar cargo según políticas de la barbería.`
+          : "Tu turno fue cancelado sin cargo.",
+      );
+    } catch (error) {
+      Alert.alert(
+        "No se pudo cancelar",
+        error instanceof Error
+          ? error.message
+          : "Intentalo de nuevo en unos segundos.",
+      );
+    } finally {
+      setIsCancellingTurn(false);
+    }
+  }, [isCancellingTurn, loadAppointmentsData, nextTurn]);
 
   useFocusEffect(
     useCallback(() => {
@@ -146,7 +245,9 @@ export default function HomeScreen() {
                   size={20}
                   color="#D4AF37"
                 />
-                <View style={styles.notificationDot} />
+                {notifications.length > 0 ? (
+                  <View style={styles.notificationDot} />
+                ) : null}
               </Pressable>
             </View>
           </View>
@@ -167,41 +268,51 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Tu Próximo Turno</Text>
-            {showNextTurnCard && (
+            {nextTurn && (
               <View style={styles.liveIndicator}>
                 <View style={styles.pulseDot} />
-                <Text style={styles.liveText}>CONFIRMADO</Text>
+                <Text style={styles.liveText}>
+                  {nextTurn.status.toUpperCase()}
+                </Text>
               </View>
             )}
           </View>
 
-          {isHomeLoading ? (
+          {isHomeLoading || isNextTurnLoading ? (
             <Skeleton style={styles.ticketCardSkeleton} />
-          ) : showNextTurnCard ? (
+          ) : nextTurn ? (
             <View style={styles.ticketCard}>
               <View style={styles.ticketInfo}>
                 <View style={styles.ticketHeader}>
-                  <Text style={styles.serviceName}>Corte Atelier & Barba</Text>
-                  <Text style={styles.priceTag}>$4.500</Text>
+                  <Text style={styles.serviceName}>{nextTurn.service}</Text>
+                  <Text style={styles.priceTag}>{nextTurn.status}</Text>
                 </View>
                 <View style={styles.detailsRow}>
                   <View style={styles.detailItem}>
                     <MaterialIcons name="event" size={14} color="#D4AF37" />
-                    <Text style={styles.detailText}>15 Oct, 10:30 AM</Text>
+                    <Text style={styles.detailText}>
+                      {nextTurn.date}, {nextTurn.time}
+                    </Text>
                   </View>
                   <View style={styles.dividerDot} />
                   <View style={styles.detailItem}>
                     <MaterialIcons name="person" size={14} color="#D4AF37" />
-                    <Text style={styles.detailText}>Mateo</Text>
+                    <Text style={styles.detailText}>{nextTurn.barber}</Text>
                   </View>
                 </View>
               </View>
               <View style={styles.ticketActions}>
                 <Pressable
-                  style={styles.btnSecondary}
+                  style={[
+                    styles.btnSecondary,
+                    isCancellingTurn && styles.disabledAction,
+                  ]}
                   onPress={() => setCancelModalVisible(true)}
+                  disabled={isCancellingTurn}
                 >
-                  <Text style={styles.btnSecondaryText}>CANCELAR</Text>
+                  <Text style={styles.btnSecondaryText}>
+                    {isCancellingTurn ? "CANCELANDO..." : "CANCELAR"}
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={styles.btnPrimary}
@@ -365,10 +476,24 @@ export default function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Notificaciones</Text>
-            {/* Aquí puedes renderizar la lista de notificaciones reales */}
-            <Text style={styles.modalBody}>
-              Aquí aparecerán tus notificaciones.
-            </Text>
+            {notifications.length > 0 ? (
+              <ScrollView
+                style={styles.notificationList}
+                contentContainerStyle={styles.notificationListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {notifications.map((item) => (
+                  <View key={item.id} style={styles.notificationCard}>
+                    <Text style={styles.notificationTitle}>{item.title}</Text>
+                    <Text style={styles.notificationText}>{item.body}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.modalBody}>
+                Aun no tienes notificaciones de turnos.
+              </Text>
+            )}
             <View style={styles.modalActions}>
               <Pressable
                 style={styles.modalBtnCancel}
@@ -398,13 +523,11 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable
                 style={styles.modalBtnConfirm}
-                onPress={() => {
-                  setShowNextTurnCard(false);
-                  setCancelModalVisible(false);
-                }}
+                onPress={handleCancelAppointment}
+                disabled={isCancellingTurn}
               >
                 <Text style={[styles.modalBtnText, { color: "#000" }]}>
-                  SÍ, CANCELAR
+                  {isCancellingTurn ? "CANCELANDO..." : "SÍ, CANCELAR"}
                 </Text>
               </Pressable>
             </View>
@@ -708,6 +831,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
     marginBottom: 25,
+  },
+  notificationList: {
+    maxHeight: 280,
+    marginTop: 14,
+    marginBottom: 18,
+  },
+  notificationListContent: {
+    gap: 10,
+  },
+  notificationCard: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#101010",
+  },
+  notificationTitle: {
+    color: "#F3F3F3",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  notificationText: {
+    color: "#9B9B9B",
+    fontSize: 12,
+    marginTop: 4,
   },
   modalActions: { flexDirection: "row", gap: 10 },
   modalBtnCancel: {

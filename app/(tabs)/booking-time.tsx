@@ -2,19 +2,19 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 import {
-  buildBookingTimeSlots,
-  getShopBarberById,
-  getShopServiceById,
+    buildBookingTimeSlots,
+    getShopBarberById,
+    getShopServiceById,
 } from "@/lib/booking-catalog";
 
 const pickFirst = (value: string | string[] | undefined) =>
@@ -151,6 +151,7 @@ export default function BookingTimeScreen() {
         buildBookingTimeSlots({
           shopId,
           barberId,
+          excludeAppointmentId: isReschedule ? appointmentId : undefined,
           serviceDurationMinutes:
             serviceDuration ||
             (await getShopServiceById(shopId, serviceId))?.durationMinutes ||
@@ -207,6 +208,8 @@ export default function BookingTimeScreen() {
     };
   }, [
     barberId,
+    appointmentId,
+    isReschedule,
     selectedDate,
     selectedDateKey,
     serviceDuration,

@@ -63,7 +63,17 @@ export default function BookingBarberScreen() {
       }
 
       setBarbers(items);
-      setSelectedBarberId((current) => current || items[0]?.id || "barber-any");
+      setSelectedBarberId((current) => {
+        if (current === "barber-any") {
+          return "barber-any";
+        }
+
+        if (items.some((item) => item.id === current)) {
+          return current;
+        }
+
+        return "barber-any";
+      });
       setIsLoading(false);
     };
 
@@ -93,7 +103,20 @@ export default function BookingBarberScreen() {
     [barbers, serviceName, shopId, shopName],
   );
 
+  const preselectedBarberUnavailable = useMemo(
+    () =>
+      preselectedBarberId !== "barber-any" &&
+      !isLoading &&
+      !barbers.some((item) => item.id === preselectedBarberId),
+    [barbers, isLoading, preselectedBarberId],
+  );
+
   const goNext = () => {
+    const selectableIds = new Set(renderedBarbers.map((item) => item.id));
+    const safeBarberId = selectableIds.has(selectedBarberId)
+      ? selectedBarberId
+      : "barber-any";
+
     router.push({
       pathname: "/(tabs)/booking-time",
       params: {
@@ -102,7 +125,7 @@ export default function BookingBarberScreen() {
         serviceId,
         serviceName,
         serviceDuration,
-        barberId: selectedBarberId,
+        barberId: safeBarberId,
       },
     });
   };
@@ -155,6 +178,17 @@ export default function BookingBarberScreen() {
             </Text>
           </View>
         )}
+
+        {preselectedBarberUnavailable ? (
+          <View style={styles.unavailableBadge}>
+            <MaterialIcons name="info-outline" size={14} color="#FFB4AB" />
+            <Text style={styles.unavailableText}>
+              {preselectedBarberName
+                ? `${preselectedBarberName} no está disponible actualmente. Seleccionamos "Cualquier profesional".`
+                : 'El barbero preseleccionado no está disponible actualmente. Seleccionamos "Cualquier profesional".'}
+            </Text>
+          </View>
+        ) : null}
 
         {isLoading ? (
           <View style={styles.emptyState}>
@@ -328,6 +362,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   preselectedText: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
+  unavailableBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: 25,
+    marginBottom: 15,
+    backgroundColor: "rgba(255, 180, 171, 0.12)",
+    alignSelf: "stretch",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 180, 171, 0.25)",
+  },
+  unavailableText: {
+    color: "#FFB4AB",
+    fontSize: 11,
+    fontWeight: "700",
+    flex: 1,
+  },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 140 },

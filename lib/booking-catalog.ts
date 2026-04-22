@@ -56,6 +56,20 @@ type DbOwnerShiftPreference = {
   night_enabled: boolean;
 };
 
+type DbOwnerPolicy = {
+  free_cancellation_hours?: number | null;
+  auto_confirm_appointments: boolean | null;
+  allow_night_bookings: boolean | null;
+};
+
+type DbCancelableAppointment = {
+  id: string;
+  client_id: string;
+  barbershop_id: string;
+  status: string;
+  start_time: string;
+};
+
 export type PublicShopCard = {
   id: string;
   name: string;
@@ -101,6 +115,10 @@ export type ClientAppointmentCard = {
   statusColor: string;
   canRate: boolean;
   stars: number;
+  shopId?: string;
+  serviceId?: string;
+  barberId?: string;
+  serviceDurationMinutes?: number;
 };
 
 export type BookingTimeSlot = {
@@ -350,6 +368,41 @@ const formatAppointmentTime = (value: string) =>
     hour12: false,
   }).format(new Date(value));
 
+const ACTIVE_APPOINTMENT_STATUSES = new Set(["pending", "confirmed"]);
+const CLOSED_APPOINTMENT_STATUSES = new Set([
+  "completed",
+  "cancelled",
+  "no_show",
+]);
+
+const isActiveClientAppointment = (
+  appointment: { status: string; start_time: string; end_time: string },
+  now: Date,
+) => {
+  if (!ACTIVE_APPOINTMENT_STATUSES.has(appointment.status)) {
+    return false;
+  }
+
+  const endAt = new Date(appointment.end_time || appointment.start_time);
+  return Number.isFinite(endAt.getTime()) && endAt >= now;
+};
+
+const isHistoryClientAppointment = (
+  appointment: { status: string; start_time: string; end_time: string },
+  now: Date,
+) => {
+  if (CLOSED_APPOINTMENT_STATUSES.has(appointment.status)) {
+    return true;
+  }
+
+  if (ACTIVE_APPOINTMENT_STATUSES.has(appointment.status)) {
+    const endAt = new Date(appointment.end_time || appointment.start_time);
+    return Number.isFinite(endAt.getTime()) && endAt < now;
+  }
+
+  return false;
+};
+
 export const formatPrice = (value: number) =>
   new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -561,6 +614,7 @@ export const getShopBarberById = async (shopId: string, barberId: string) => {
     )
     .eq("barbershop_id", shopId)
     .eq("id", barberId)
+    .eq("status", "active")
     .maybeSingle<DbBarber>();
   if (error || !data) {
     return null;
@@ -664,12 +718,14 @@ export const getFeaturedBarbers = async (): Promise<FeaturedBarberCard[]> => {
 export const buildBookingTimeSlots = async ({
   shopId,
   barberId,
+  excludeAppointmentId,
   serviceDurationMinutes,
   selectedDateIso,
   selectedDateKey,
 }: {
   shopId: string;
   barberId?: string;
+  excludeAppointmentId?: string;
   serviceDurationMinutes: number;
   selectedDateIso?: string;
   selectedDateKey?: string;
@@ -746,13 +802,29 @@ export const buildBookingTimeSlots = async ({
         night: shiftPreference.night_enabled,
       };
     }
+
+    const { data: ownerPolicy, error: ownerPolicyError } = await supabase
+      .from("owner_policies")
+      .select("allow_night_bookings")
+      .eq("owner_id", shopOwner.owner_id)
+      .maybeSingle<Pick<DbOwnerPolicy, "allow_night_bookings">>();
+
+    if (
+      !ownerPolicyError &&
+      typeof ownerPolicy?.allow_night_bookings === "boolean"
+    ) {
+      enabledShifts = {
+        ...enabledShifts,
+        night: enabledShifts.night && ownerPolicy.allow_night_bookings,
+      };
+    }
   }
 
   const requestedSpecificBarber = Boolean(
     barberId && barberId !== "barber-any",
   );
   const candidateBarberIds = requestedSpecificBarber
-    ? ([resolvedBarber?.id ?? barberId ?? null].filter(Boolean) as string[])
+    ? ([resolvedBarber?.id ?? null].filter(Boolean) as string[])
     : availableBarbers.map((item) => item.id);
 
   if (!candidateBarberIds.length) {
@@ -785,16 +857,22 @@ export const buildBookingTimeSlots = async ({
   const isToday = formatDateKey(baseDate) === formatDateKey(now);
   const minStartMinutes = now.getHours() * 60 + now.getMinutes() + 5;
   const buildSlotsForBarber = async (candidateBarberId: string) => {
+    const appointmentsQuery = supabase
+      .from("appointments")
+      .select("start_time, end_time")
+      .eq("barbershop_id", shopId)
+      .eq("barber_id", candidateBarberId)
+      .in("status", ["pending", "confirmed", "completed"])
+      .gte("start_time", startOfDay.toISOString())
+      .lt("start_time", endOfDay.toISOString())
+      .returns<DbAppointmentRange[]>();
+
+    const filteredAppointmentsQuery = excludeAppointmentId
+      ? appointmentsQuery.neq("id", excludeAppointmentId)
+      : appointmentsQuery;
+
     const [appointmentsResponse, breaksResponse] = await Promise.all([
-      supabase
-        .from("appointments")
-        .select("start_time, end_time")
-        .eq("barbershop_id", shopId)
-        .eq("barber_id", candidateBarberId)
-        .in("status", ["pending", "confirmed", "completed"])
-        .gte("start_time", startOfDay.toISOString())
-        .lt("start_time", endOfDay.toISOString())
-        .returns<DbAppointmentRange[]>(),
+      filteredAppointmentsQuery,
       supabase
         .from("barber_breaks")
         .select("start_time, end_time")
@@ -922,6 +1000,63 @@ export const createAppointment = async ({
     throw new Error("No puedes reservar un turno en una fecha u hora pasada.");
   }
 
+  const { data: activeBarber, error: activeBarberError } = await supabase
+    .from("barbers")
+    .select("id")
+    .eq("id", barberId)
+    .eq("barbershop_id", shopId)
+    .eq("status", "active")
+    .maybeSingle<{ id: string }>();
+
+  if (activeBarberError) {
+    throw new Error(activeBarberError.message);
+  }
+
+  if (!activeBarber?.id) {
+    throw new Error(
+      "Este barbero está inactivo y no puede recibir nuevos turnos.",
+    );
+  }
+
+  let autoConfirmAppointments = true;
+  let allowNightBookings = true;
+
+  const { data: shopOwner } = await supabase
+    .from("barbershops")
+    .select("owner_id")
+    .eq("id", shopId)
+    .maybeSingle<{ owner_id: string }>();
+
+  if (shopOwner?.owner_id) {
+    const { data: ownerPolicy, error: ownerPolicyError } = await supabase
+      .from("owner_policies")
+      .select("auto_confirm_appointments, allow_night_bookings")
+      .eq("owner_id", shopOwner.owner_id)
+      .maybeSingle<DbOwnerPolicy>();
+
+    if (!ownerPolicyError && ownerPolicy) {
+      if (typeof ownerPolicy.auto_confirm_appointments === "boolean") {
+        autoConfirmAppointments = ownerPolicy.auto_confirm_appointments;
+      }
+
+      if (typeof ownerPolicy.allow_night_bookings === "boolean") {
+        allowNightBookings = ownerPolicy.allow_night_bookings;
+      }
+    }
+  }
+
+  const appointmentStartMinutes =
+    startDate.getHours() * 60 + startDate.getMinutes();
+  const NIGHT_SHIFT_START_MINUTES = 18 * 60;
+  if (
+    !allowNightBookings &&
+    appointmentStartMinutes >= NIGHT_SHIFT_START_MINUTES
+  ) {
+    throw new Error(
+      "La barbería no permite reservas nocturnas en este momento.",
+    );
+  }
+
   if (startDate.getMinutes() % APPOINTMENT_SLOT_MINUTES !== 0) {
     throw new Error(
       `La hora debe comenzar en bloques de ${APPOINTMENT_SLOT_MINUTES} minutos.`,
@@ -994,7 +1129,7 @@ export const createAppointment = async ({
       service_id: serviceId,
       start_time: startDate.toISOString(),
       end_time: normalizedEndDate.toISOString(),
-      status: "confirmed",
+      status: autoConfirmAppointments ? "confirmed" : "pending",
       notes: notes?.trim() || null,
     })
     .select("id")
@@ -1005,6 +1140,87 @@ export const createAppointment = async ({
   }
 
   return appointment?.id ?? null;
+};
+
+export const cancelClientAppointment = async (
+  appointmentId: string,
+): Promise<{ penaltyApplies: boolean; freeCancellationHours: number }> => {
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+
+  if (!user) {
+    throw new Error("Debes iniciar sesión para cancelar el turno.");
+  }
+
+  const { data: appointment, error: appointmentError } = await supabase
+    .from("appointments")
+    .select("id, client_id, barbershop_id, status, start_time")
+    .eq("id", appointmentId)
+    .eq("client_id", user.id)
+    .maybeSingle<DbCancelableAppointment>();
+
+  if (appointmentError) {
+    throw new Error(appointmentError.message);
+  }
+
+  if (!appointment) {
+    throw new Error("No encontramos el turno a cancelar.");
+  }
+
+  if (!["pending", "confirmed"].includes(appointment.status)) {
+    throw new Error("Este turno ya no se puede cancelar.");
+  }
+
+  let freeCancellationHours = 12;
+
+  const { data: shopOwner } = await supabase
+    .from("barbershops")
+    .select("owner_id")
+    .eq("id", appointment.barbershop_id)
+    .maybeSingle<{ owner_id: string }>();
+
+  if (shopOwner?.owner_id) {
+    const { data: ownerPolicy, error: ownerPolicyError } = await supabase
+      .from("owner_policies")
+      .select("free_cancellation_hours")
+      .eq("owner_id", shopOwner.owner_id)
+      .maybeSingle<Pick<DbOwnerPolicy, "free_cancellation_hours">>();
+
+    if (
+      !ownerPolicyError &&
+      Number.isFinite(ownerPolicy?.free_cancellation_hours)
+    ) {
+      freeCancellationHours = Math.max(
+        0,
+        Number(ownerPolicy?.free_cancellation_hours ?? 0),
+      );
+    }
+  }
+
+  const appointmentStart = new Date(appointment.start_time);
+  const hoursUntilAppointment =
+    (appointmentStart.getTime() - Date.now()) / (60 * 60 * 1000);
+  const penaltyApplies = hoursUntilAppointment < freeCancellationHours;
+
+  const { error: cancelError } = await supabase
+    .from("appointments")
+    .update({
+      status: "cancelled",
+      cancelled_by: user.id,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", appointment.id)
+    .eq("client_id", user.id)
+    .in("status", ["pending", "confirmed"]);
+
+  if (cancelError) {
+    throw new Error(cancelError.message);
+  }
+
+  return {
+    penaltyApplies,
+    freeCancellationHours,
+  };
 };
 
 const loadClientAppointments = async () => {
@@ -1038,9 +1254,9 @@ const loadClientAppointments = async () => {
     await Promise.all([
       supabase
         .from("services")
-        .select("id, name")
+        .select("id, name, duration_minutes")
         .in("id", serviceIds)
-        .returns<{ id: string; name: string }[]>(),
+        .returns<{ id: string; name: string; duration_minutes: number }[]>(),
       supabase
         .from("barbers")
         .select("id, user_id")
@@ -1055,6 +1271,9 @@ const loadClientAppointments = async () => {
   const serviceById = new Map(
     (services ?? []).map((service) => [service.id, service.name]),
   );
+  const serviceDurationById = new Map(
+    (services ?? []).map((service) => [service.id, service.duration_minutes]),
+  );
   const barberById = new Map(
     (barbers ?? []).map((barber) => [barber.id, barber.user_id]),
   );
@@ -1062,13 +1281,14 @@ const loadClientAppointments = async () => {
     (profiles ?? []).map((profile) => [profile.id, profile.full_name ?? ""]),
   );
 
+  const now = new Date();
+
   return appointments
-    .filter(
-      (item) =>
-        item.status === "confirmed" && new Date(item.start_time) >= new Date(),
-    )
+    .filter((item) => isActiveClientAppointment(item, now))
     .map((appointment) => {
       const barberUserId = barberById.get(appointment.barber_id) ?? "";
+      const isPending = appointment.status === "pending";
+
       return {
         id: appointment.id,
         icon: "content-cut",
@@ -1076,10 +1296,15 @@ const loadClientAppointments = async () => {
         date: formatAppointmentDate(appointment.start_time),
         time: `${formatAppointmentTime(appointment.start_time)} hs`,
         barber: profileById.get(barberUserId) || "Barbero",
-        status: "Confirmado",
-        statusColor: "#4CAF50",
+        status: isPending ? "Pendiente" : "Confirmado",
+        statusColor: isPending ? "#F9A825" : "#4CAF50",
         canRate: false,
         stars: 0,
+        shopId: appointment.barbershop_id,
+        serviceId: appointment.service_id,
+        barberId: appointment.barber_id,
+        serviceDurationMinutes:
+          serviceDurationById.get(appointment.service_id) ?? undefined,
       } satisfies ClientAppointmentCard;
     });
 };
@@ -1102,7 +1327,6 @@ export const getClientAppointmentHistory = async (): Promise<
       "id, status, start_time, end_time, service_id, barber_id, barbershop_id",
     )
     .eq("client_id", user.id)
-    .in("status", ["completed", "cancelled", "no_show"])
     .order("start_time", { ascending: false });
 
   if (error || !appointments?.length) {
@@ -1144,32 +1368,40 @@ export const getClientAppointmentHistory = async (): Promise<
     (profiles ?? []).map((profile) => [profile.id, profile.full_name ?? ""]),
   );
 
-  return appointments.map((appointment) => {
-    const barberUserId = barberById.get(appointment.barber_id) ?? "";
-    const statusLabel =
-      appointment.status === "completed"
-        ? "Completado"
-        : appointment.status === "cancelled"
-          ? "Cancelado"
-          : "No-show";
+  const now = new Date();
 
-    return {
-      id: appointment.id,
-      icon:
-        appointment.status === "completed" ? "event-available" : "event-note",
-      service: serviceById.get(appointment.service_id) ?? "Servicio",
-      date: formatAppointmentDate(appointment.start_time),
-      time: `${formatAppointmentTime(appointment.start_time)} hs`,
-      barber: profileById.get(barberUserId) || "Barbero",
-      status: statusLabel,
-      statusColor:
+  return appointments
+    .filter((appointment) => isHistoryClientAppointment(appointment, now))
+    .map((appointment) => {
+      const barberUserId = barberById.get(appointment.barber_id) ?? "";
+      const statusLabel =
         appointment.status === "completed"
-          ? "#4CAF50"
+          ? "Completado"
           : appointment.status === "cancelled"
-            ? "#FF5252"
-            : "#777",
-      canRate: appointment.status === "completed",
-      stars: appointment.status === "completed" ? 0 : 0,
-    } satisfies ClientAppointmentCard;
-  });
+            ? "Cancelado"
+            : appointment.status === "no_show"
+              ? "No-show"
+              : "Finalizado";
+
+      return {
+        id: appointment.id,
+        icon:
+          appointment.status === "completed" ? "event-available" : "event-note",
+        service: serviceById.get(appointment.service_id) ?? "Servicio",
+        date: formatAppointmentDate(appointment.start_time),
+        time: `${formatAppointmentTime(appointment.start_time)} hs`,
+        barber: profileById.get(barberUserId) || "Barbero",
+        status: statusLabel,
+        statusColor:
+          appointment.status === "completed"
+            ? "#4CAF50"
+            : appointment.status === "cancelled"
+              ? "#FF5252"
+              : appointment.status === "no_show"
+                ? "#777"
+                : "#999",
+        canRate: appointment.status === "completed",
+        stars: appointment.status === "completed" ? 0 : 0,
+      } satisfies ClientAppointmentCard;
+    });
 };

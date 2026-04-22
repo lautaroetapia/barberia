@@ -18,10 +18,13 @@ import {
 } from "react-native";
 
 import { AppToast } from "@/components/ui/app-toast";
+import { supabase } from "@/lib/supabase";
+import { getUserAvatarUri } from "@/lib/user-avatar";
 
 const AVATAR_URI = "https://i.pravatar.cc/150?u=lautaro";
 
 export default function BookingsHistoryScreen() {
+  const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
   const [history, setHistory] = useState<ClientAppointmentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratedIds, setRatedIds] = useState<string[]>([]);
@@ -33,6 +36,15 @@ export default function BookingsHistoryScreen() {
 
   useEffect(() => {
     let mounted = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted) {
+        return;
+      }
+
+      setAvatarUri(getUserAvatarUri(data.user ?? null, AVATAR_URI));
+    });
+
     setLoading(true);
     getClientAppointmentHistory()
       .then((data) => {
@@ -76,7 +88,7 @@ export default function BookingsHistoryScreen() {
               NAVAJA <Text style={styles.goldText}>DORADA</Text>
             </Text>
             <Image
-              source={{ uri: AVATAR_URI }}
+              source={{ uri: avatarUri }}
               style={styles.avatar}
               contentFit="cover"
             />

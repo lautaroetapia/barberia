@@ -1,6 +1,6 @@
 # Flujo Completo de la Aplicación "Navaja Dorada"
 
-**Versión:** 1.3.0  
+**Versión:** 1.4.0  
 **Backend:** Supabase (Auth, PostgreSQL, Storage, Realtime, Edge Functions)  
 **Roles:** Cliente, Barbero, Dueño (Barbería)
 
@@ -142,6 +142,12 @@
 - **Turno activo:** detalles completos, código QR, botones "Reprogramar" (solo fecha/hora) y "Cancelar" (con política de penalización).
 - **Historial:** lista de turnos pasados con opción de calificar.
 
+**Cancelación implementada con políticas:**
+
+- La cancelación consulta `free_cancellation_hours` de la barbería asociada al turno.
+- Si faltan menos horas que el umbral configurado, el turno se cancela y la app informa que **puede aplicar cargo**.
+- Si está fuera de la ventana de penalización, la app informa cancelación **sin cargo**.
+
 ### Pantalla Perfil
 
 - Datos personales (avatar, nombre, email, teléfono).
@@ -204,6 +210,7 @@
 
 - Solo cambia fecha/hora (misma barbería, servicio y barbero).
 - Abre directamente el **Paso 4**.
+- El cálculo de disponibilidad excluye el turno original para evitar autobloqueo de horarios.
 
 ---
 
@@ -251,7 +258,7 @@
 
 ### Más
 
-- Datos de la barbería (incluye imagen/logo local).
+- Datos de la barbería (incluye imagen/logo persistido en Supabase Storage).
 - Horario semanal (acceso a agenda de dueño).
 - Franjas de turnos (pantalla separada de agenda).
 - Políticas (cancelación, no-show, auto-confirmación, turnos nocturnos).
@@ -273,7 +280,12 @@
 - Acciones según estado:
   - Pendiente → "Iniciar", "No asistió".
   - En progreso → "Completar", "No asistió".
-  - Completado / No asistió / Libre → solo lectura.
+  - Completado / No asistió → solo lectura.
+  - Libre → disponible para agendado manual.
+- Botón flotante `+` con agendado rápido:
+  - Abre modal para elegir **servicio** (muestra duración y bloques de 30 min).
+  - Luego permite elegir un **horario libre** del día.
+  - Abre el modal de alta de turno con servicio y hora preseleccionados.
 - Botón **"Sincronizar a calendario"**:
   - Solicita permisos de calendario.
   - Crea/usa calendario "Navaja Dorada".
@@ -368,6 +380,9 @@ _La vinculación actual combina flujos internos y validación por cuenta de app.
 ### Estado actual implementado (frontend cliente)
 
 - Favoritos (barberias/barberos) actualmente se guardan en `AsyncStorage` para UX local inmediata.
+- Avatares de cabecera en pantallas principales se resuelven dinámicamente desde la sesión autenticada (con fallback visual).
+- Cancelación de turnos conectada a políticas de la barbería (`free_cancellation_hours`) con feedback contextual de posible cargo.
+- Reprogramación ajustada para no bloquear el mismo turno durante el recálculo de horarios.
 - Pantallas conectadas a favoritos locales:
   - Home (barberos destacados)
   - Barberias lista
@@ -389,11 +404,16 @@ _La vinculación actual combina flujos internos y validación por cuenta de app.
 - Reportes con exportación PDF y compartir (`expo-print`, `expo-sharing`).
 - Soporte con acciones nativas (email, WhatsApp, copiar contacto).
 - Flujo de feedback visual con toasts y estados de procesamiento en pantallas clave.
+- Políticas conectadas al flujo real de reservas:
+  - `auto_confirm_appointments` define si un nuevo turno se crea en `confirmed` o `pending`.
+  - `allow_night_bookings` impacta disponibilidad nocturna y validación al crear turnos.
+- Perfil de barbería con persistencia de logo en Storage y fallback operativo de bucket.
 
 ### Estado actual implementado (frontend barbero)
 
 - Agenda de barbero conectada a almacenamiento local de turnos (`owner-agenda`).
 - Cambio de estados operativo: pendiente, en progreso, completado, no asistió.
+- Agendado manual mejorado desde botón flotante `+` con selección de servicio, duración por bloques y horario libre.
 - Sincronización a calendario del dispositivo con deduplicación de eventos.
 - Recordatorios locales automáticos 1 hora antes según preferencia de notificaciones.
 - Historial con filtros por período y métricas dinámicas del rango.

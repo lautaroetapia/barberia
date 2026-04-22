@@ -57,6 +57,11 @@ const monthNames = [
 
 export default function BarberMyAgendaScreen() {
   // Estado para modal de agendado manual (debe estar aquí)
+  const [showQuickTimeModal, setShowQuickTimeModal] = useState(false);
+  const [quickServices, setQuickServices] = useState<OwnerService[]>([]);
+  const [quickSelectedServiceId, setQuickSelectedServiceId] = useState<
+    string | null
+  >(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [services, setServices] = useState<OwnerService[]>([]);
@@ -66,14 +71,17 @@ export default function BarberMyAgendaScreen() {
   const [addError, setAddError] = useState<string>("");
 
   // Cargar servicios al abrir modal
-  const openAddModal = async (time: string) => {
+  const openAddModal = async (time: string, preferredServiceId?: string) => {
     setSelectedTime(time);
     setShowAddModal(true);
     setAddError("");
     const loaded = await getOwnerServices();
     const activeServices = loaded.filter((item) => item.active);
     setServices(activeServices);
-    setSelectedService(activeServices[0] ?? null);
+    const preferredService = preferredServiceId
+      ? activeServices.find((item) => item.id === preferredServiceId)
+      : null;
+    setSelectedService(preferredService ?? activeServices[0] ?? null);
     if (!activeServices.length) {
       setAddError(
         "No hay servicios activos. Crea un servicio primero para agendar.",
@@ -286,6 +294,29 @@ export default function BarberMyAgendaScreen() {
   }, [timeline]);
 
   const totalHoyLabel = useMemo(() => `${totalHoy} completados`, [totalHoy]);
+
+  const quickSelectedService = useMemo(
+    () =>
+      quickServices.find((item) => item.id === quickSelectedServiceId) ?? null,
+    [quickSelectedServiceId, quickServices],
+  );
+
+  const quickSelectedBlocks = useMemo(() => {
+    const minutes = Number(quickSelectedService?.duration ?? 0);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      return 1;
+    }
+
+    return Math.ceil(minutes / 30);
+  }, [quickSelectedService?.duration]);
+
+  const availableFreeSlots = useMemo(
+    () =>
+      [...timeline]
+        .filter((item) => item.status === "libre")
+        .sort((a, b) => a.time.localeCompare(b.time)),
+    [timeline],
+  );
 
   const updateAppointmentStatus = async (
     id: string,
@@ -528,6 +559,47 @@ export default function BarberMyAgendaScreen() {
     }
   };
 
+  const handleFabQuickAdd = async () => {
+    if (isLoading || isProcessing) {
+      return;
+    }
+
+    if (!availableFreeSlots.length) {
+      setToast({
+        visible: true,
+        message: "No hay horarios libres para agendar hoy.",
+        type: "info",
+      });
+      return;
+    }
+
+    const loadedServices = await getOwnerServices();
+    const activeServices = loadedServices.filter((item) => item.active);
+
+    if (!activeServices.length) {
+      setToast({
+        visible: true,
+        message: "No hay servicios activos. Crea uno para agendar.",
+        type: "error",
+      });
+      return;
+    }
+
+    const nextSelectedService =
+      activeServices.find((item) => item.id === selectedService?.id) ??
+      activeServices[0];
+
+    setQuickServices(activeServices);
+    setQuickSelectedServiceId(nextSelectedService?.id ?? null);
+
+    setShowQuickTimeModal(true);
+  };
+
+  const handleSelectQuickTime = async (time: string) => {
+    setShowQuickTimeModal(false);
+    await openAddModal(time, quickSelectedServiceId ?? undefined);
+  };
+
   return (
     <View style={styles.screen}>
       <OwnerToast
@@ -560,6 +632,91 @@ export default function BarberMyAgendaScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <Modal visible={showQuickTimeModal} transparent animationType="fade">
+          <View style={styles.quickModalOverlay}>
+            <View style={styles.quickModalCard}>
+              <Text style={styles.quickModalTitle}>Selecciona un horario</Text>
+              <Text style={styles.quickModalSubtitle}>
+                Elige un bloque libre para agendar manualmente.
+              </Text>
+
+              <Text style={styles.quickSectionLabel}>Servicio</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickServiceList}
+              >
+                {quickServices.map((service) => {
+                  const serviceBlocks = Math.ceil(
+                    Math.max(1, Number(service.duration) || 30) / 30,
+                  );
+                  const isSelected = service.id === quickSelectedServiceId;
+
+                  return (
+                    <Pressable
+                      key={service.id}
+                      style={[
+                        styles.quickServiceChip,
+                        isSelected && styles.quickServiceChipActive,
+                      ]}
+                      onPress={() => setQuickSelectedServiceId(service.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.quickServiceName,
+                          isSelected && styles.quickServiceNameActive,
+                        ]}
+                      >
+                        {service.serviceName}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.quickServiceMeta,
+                          isSelected && styles.quickServiceMetaActive,
+                        ]}
+                      >
+                        {service.duration} min · {serviceBlocks} bloque(s)
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <Text style={styles.quickSectionLabel}>Horario libre</Text>
+              <Text style={styles.quickDurationHint}>
+                {quickSelectedService
+                  ? `Duracion estimada: ${quickSelectedService.duration} min (${quickSelectedBlocks} bloque(s)).`
+                  : "Selecciona un servicio para calcular la duracion."}
+              </Text>
+
+              <ScrollView
+                style={styles.quickModalList}
+                contentContainerStyle={styles.quickModalListContent}
+              >
+                {availableFreeSlots.map((slot) => (
+                  <Pressable
+                    key={slot.id}
+                    style={styles.quickTimeButton}
+                    onPress={() => {
+                      void handleSelectQuickTime(slot.time);
+                    }}
+                  >
+                    <MaterialIcons name="schedule" size={15} color="#d4af37" />
+                    <Text style={styles.quickTimeText}>{slot.time}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Pressable
+                style={styles.quickModalClose}
+                onPress={() => setShowQuickTimeModal(false)}
+              >
+                <Text style={styles.quickModalCloseText}>Cerrar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
         {/* Modal para agendar manualmente */}
         <Modal visible={showAddModal} transparent animationType="slide">
           <View
@@ -805,7 +962,9 @@ export default function BarberMyAgendaScreen() {
 
       <Pressable
         style={styles.fab}
-        onPress={() => router.push("/barber/clients-management")}
+        onPress={() => {
+          void handleFabQuickAdd();
+        }}
       >
         <MaterialIcons name="add" size={28} color="#3c2f00" />
       </Pressable>
@@ -1021,5 +1180,114 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
+  },
+  quickModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  quickModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#1c1b1b",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(77,70,53,0.35)",
+    padding: 16,
+  },
+  quickModalTitle: {
+    color: "#f0e6d2",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  quickModalSubtitle: {
+    color: "#b8ab8d",
+    fontSize: 12,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  quickSectionLabel: {
+    color: "#9f906b",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  quickServiceList: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  quickServiceChip: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(77,70,53,0.4)",
+    backgroundColor: "#252423",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 160,
+  },
+  quickServiceChipActive: {
+    borderColor: "rgba(212,175,55,0.7)",
+    backgroundColor: "#2f2a1b",
+  },
+  quickServiceName: {
+    color: "#e5dcc6",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  quickServiceNameActive: {
+    color: "#f2ca50",
+  },
+  quickServiceMeta: {
+    color: "#a89a79",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  quickServiceMetaActive: {
+    color: "#d9be69",
+  },
+  quickDurationHint: {
+    color: "#b8ab8d",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  quickModalList: {
+    maxHeight: 250,
+  },
+  quickModalListContent: {
+    gap: 8,
+  },
+  quickTimeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 40,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#252423",
+    borderWidth: 1,
+    borderColor: "rgba(77,70,53,0.35)",
+  },
+  quickTimeText: {
+    color: "#f2ca50",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  quickModalClose: {
+    marginTop: 14,
+    minHeight: 42,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#d4af37",
+  },
+  quickModalCloseText: {
+    color: "#3c2f00",
+    fontSize: 13,
+    fontWeight: "800",
   },
 });

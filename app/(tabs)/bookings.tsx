@@ -1,4 +1,5 @@
 import {
+    cancelClientAppointment,
     getClientActiveAppointments,
     type ClientAppointmentCard,
 } from "@/lib/booking-catalog";
@@ -8,6 +9,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    Alert,
     Modal,
     Platform,
     Pressable,
@@ -18,9 +20,13 @@ import {
     View,
 } from "react-native";
 
+import { supabase } from "@/lib/supabase";
+import { getUserAvatarUri } from "@/lib/user-avatar";
+
 const AVATAR_URI = "https://i.pravatar.cc/150?u=lautaro";
 
 export default function BookingsScreen() {
+  const [avatarUri, setAvatarUri] = useState(AVATAR_URI);
   const [appointments, setAppointments] = useState<ClientAppointmentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
@@ -30,6 +36,15 @@ export default function BookingsScreen() {
 
   useEffect(() => {
     let mounted = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted) {
+        return;
+      }
+
+      setAvatarUri(getUserAvatarUri(data.user ?? null, AVATAR_URI));
+    });
+
     setLoading(true);
     getClientActiveAppointments()
       .then((data) => {
@@ -43,11 +58,25 @@ export default function BookingsScreen() {
     };
   }, []);
 
-  // Cancelar turno (elimina visualmente, pero deberías agregar lógica real de cancelación en Supabase)
-  const handleCancel = (id: string) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
-    setCancelModalVisible(false);
-    // Aquí deberías llamar a Supabase para cancelar el turno realmente
+  const handleCancel = async (id: string) => {
+    try {
+      const result = await cancelClientAppointment(id);
+      setAppointments((prev) => prev.filter((a) => a.id !== id));
+      setCancelModalVisible(false);
+      Alert.alert(
+        "Turno cancelado",
+        result.penaltyApplies
+          ? `La cancelación quedó registrada. Como faltan menos de ${result.freeCancellationHours} horas, puede aplicar cargo según políticas de la barbería.`
+          : "Tu turno fue cancelado sin cargo.",
+      );
+    } catch (error) {
+      Alert.alert(
+        "No se pudo cancelar",
+        error instanceof Error
+          ? error.message
+          : "Intentalo de nuevo en unos segundos.",
+      );
+    }
   };
 
   return (
@@ -64,7 +93,7 @@ export default function BookingsScreen() {
               NAVAJA <Text style={styles.goldText}>DORADA</Text>
             </Text>
             <Image
-              source={{ uri: AVATAR_URI }}
+              source={{ uri: avatarUri }}
               style={styles.avatar}
               contentFit="cover"
             />
@@ -141,6 +170,13 @@ export default function BookingsScreen() {
                             params: {
                               appointmentId: item.id,
                               isReschedule: "1",
+                              shopId: item.shopId,
+                              serviceId: item.serviceId,
+                              barberId: item.barberId,
+                              serviceName: item.service,
+                              serviceDuration: item.serviceDurationMinutes
+                                ? String(item.serviceDurationMinutes)
+                                : undefined,
                             },
                           })
                         }
@@ -224,7 +260,7 @@ export default function BookingsScreen() {
                 style={styles.modalBtnConfirm}
                 onPress={() => {
                   if (selectedAppointmentId)
-                    handleCancel(selectedAppointmentId);
+                    void handleCancel(selectedAppointmentId);
                 }}
               >
                 <Text style={[styles.modalBtnText, { color: "#000" }]}>

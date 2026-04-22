@@ -10,6 +10,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 const OWNED_BARBERSHOP_KEY = "owned_barbershop_profile";
 const OWNED_BARBERSHOP_BUCKET =
   process.env.EXPO_PUBLIC_SUPABASE_BARBERSHOP_BUCKET ?? "barbershops";
+const FALLBACK_BARBERSHOP_BUCKET = "avatars";
 
 export type OwnedBarbershopProfile = {
   id?: string;
@@ -44,6 +45,36 @@ const guessExtensionFromType = (contentType: string) => {
   return "jpg";
 };
 
+const uploadImageToBucket = async ({
+  bucket,
+  ownerId,
+  contentType,
+  fileBuffer,
+  fileExtension,
+}: {
+  bucket: string;
+  ownerId: string;
+  contentType: string;
+  fileBuffer: ArrayBuffer;
+  fileExtension: string;
+}) => {
+  const filePath = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${fileExtension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, fileBuffer, {
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  return data.publicUrl;
+};
+
 const uploadBarbershopImageIfNeeded = async (
   ownerId: string,
   imageUri: string,
@@ -64,25 +95,32 @@ const uploadBarbershopImageIfNeeded = async (
 
   const contentType = response.headers.get("content-type") ?? "image/jpeg";
   const fileExtension = guessExtensionFromType(contentType);
-  const filePath = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${fileExtension}`;
   const fileBuffer = await response.arrayBuffer();
 
-  const { error: uploadError } = await supabase.storage
-    .from(OWNED_BARBERSHOP_BUCKET)
-    .upload(filePath, fileBuffer, {
+  try {
+    return await uploadImageToBucket({
+      bucket: OWNED_BARBERSHOP_BUCKET,
+      ownerId,
       contentType,
-      upsert: false,
+      fileBuffer,
+      fileExtension,
     });
+  } catch (error) {
+    if (
+      isBucketNotFoundError(error) &&
+      OWNED_BARBERSHOP_BUCKET !== FALLBACK_BARBERSHOP_BUCKET
+    ) {
+      return uploadImageToBucket({
+        bucket: FALLBACK_BARBERSHOP_BUCKET,
+        ownerId,
+        contentType,
+        fileBuffer,
+        fileExtension,
+      });
+    }
 
-  if (uploadError) {
-    throw new Error(uploadError.message);
+    throw error;
   }
-
-  const { data } = supabase.storage
-    .from(OWNED_BARBERSHOP_BUCKET)
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
 };
 
 const resolveLogoUrlForPersistence = async (
@@ -102,11 +140,10 @@ const resolveLogoUrlForPersistence = async (
   try {
     return await uploadBarbershopImageIfNeeded(ownerId, trimmedUri);
   } catch (error) {
-    // Fallback seguro: si no existe bucket, mantener logo anterior y no romper guardado.
-    if (isBucketNotFoundError(error)) {
-      return existingLogoUrl ?? "";
+    // Si falla la carga, mantener logo existente solo cuando no hay cambio de imagen.
+    if (!trimmedUri && existingLogoUrl) {
+      return existingLogoUrl;
     }
-
     throw error;
   }
 };
