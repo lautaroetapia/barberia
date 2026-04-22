@@ -30,7 +30,7 @@ Aplicacion movil para gestion de barberia con experiencia separada por roles, re
 ## Creado por
 
 **Tapia Lautaro**  
-Materia: **Diseno Movil**
+Materia: **Diseño de Dispositivos Móviles**
 
 ## Descripcion
 
@@ -212,4 +212,4 @@ Este proyecto fue pensado para mostrar un flujo movil completo, ordenado por rol
 
 ## Licencia
 
-Proyecto academico para la materia Diseno Movil.
+Proyecto académico para la materia Diseño de Dispositivos Móviles.
